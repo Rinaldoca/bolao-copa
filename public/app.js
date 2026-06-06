@@ -603,7 +603,7 @@ function renderSections(list, keyFn, labelFn) {
     (sections[k] = sections[k] || []).push(m);
   });
 
-  return Object.entries(sections).map(([key, matches]) => {
+  return Object.entries(sections).sort(([a], [b]) => a.localeCompare(b)).map(([key, matches]) => {
     const collapsed  = collapsedGroups.has(key);
     const { name, sub } = labelFn(key);
 
