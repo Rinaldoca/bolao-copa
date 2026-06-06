@@ -5,11 +5,19 @@ const DATA_DIR = process.env.DATA_DIR || __dirname;
 const FILE = path.join(DATA_DIR, 'bolao.json');
 
 const DEFAULTS = {
-  settings: { admin_password: 'bolao2026' },
-  _seq:     { users: 0, matches: 0, bets: 0 },
-  users:    [],
-  matches:  [],
-  bets:     [],
+  settings: {
+    admin_password:    'bolao2026',
+    champion:          null,   // actual champion team
+    top_scorer:        null,   // actual top scorer name
+    special_bets_open: true,   // admin toggle for champion + scorer bets
+  },
+  _seq: { users: 0, matches: 0, bets: 0, feed: 0 },
+  users:         [],
+  matches:       [],
+  bets:          [],
+  champion_bets: [],  // { user_id, team }
+  scorer_bets:   [],  // { user_id, name }
+  feed:          [],  // result feed entries (newest first)
 };
 
 let _data = null;
@@ -18,6 +26,15 @@ function load() {
   if (_data) return _data;
   try {
     _data = JSON.parse(fs.readFileSync(FILE, 'utf8'));
+    // Migrate older saves
+    _data.champion_bets                = _data.champion_bets                || [];
+    _data.scorer_bets                  = _data.scorer_bets                  || [];
+    _data.feed                         = _data.feed                         || [];
+    _data._seq.feed                    = _data._seq.feed                    || 0;
+    _data.settings.champion            = _data.settings.champion            ?? null;
+    _data.settings.top_scorer          = _data.settings.top_scorer          ?? null;
+    _data.settings.special_bets_open   = _data.settings.special_bets_open   ?? true;
+    _data.settings.last_sync           = _data.settings.last_sync           ?? null;
   } catch {
     _data = JSON.parse(JSON.stringify(DEFAULTS));
     persist();
@@ -29,52 +46,84 @@ function persist() {
   fs.writeFileSync(FILE, JSON.stringify(_data, null, 2));
 }
 
-// ── Users ────────────────────────────────────────────────────────────────────
+// ── Users ─────────────────────────────────────────────────────────────────────
 
-function getUsers() {
-  return load().users.slice().sort((a, b) => a.name.localeCompare(b.name));
-}
-
-function getUserById(id) {
-  return load().users.find(u => u.id === id) || null;
-}
+function getUsers()       { return load().users.slice().sort((a, b) => a.name.localeCompare(b.name)); }
+function getUserById(id)  { return load().users.find(u => u.id === id) || null; }
 
 function createUser(name) {
   const db = load();
-  const clash = db.users.find(u => u.name.toLowerCase() === name.toLowerCase());
-  if (clash) throw new Error('DUPLICATE');
+  if (db.users.find(u => u.name.toLowerCase() === name.toLowerCase())) throw new Error('DUPLICATE');
   const user = { id: ++db._seq.users, name, created_at: new Date().toISOString() };
   db.users.push(user);
   persist();
   return user;
 }
 
-// ── Matches ──────────────────────────────────────────────────────────────────
+// ── Matches ───────────────────────────────────────────────────────────────────
 
 function getMatches() {
-  return load().matches.slice().sort((a, b) =>
-    a.match_date.localeCompare(b.match_date) || a.id - b.id
-  );
+  const db = load();
+  return db.matches
+    .slice()
+    .sort((a, b) => a.match_date.localeCompare(b.match_date) || a.id - b.id)
+    .map(m => ({ ...m, bet_count: db.bets.filter(b => b.match_id === m.id).length }));
 }
 
-function getMatchById(id) {
-  return load().matches.find(m => m.id === id) || null;
-}
+function getMatchById(id) { return load().matches.find(m => m.id === id) || null; }
 
-function createMatch({ home_team, away_team, match_date, stage, group_name, venue }) {
+function createMatch({ home_team, away_team, match_date, stage, group_name, venue, api_match_id }) {
   const db = load();
   const match = {
     id: ++db._seq.matches,
+    api_match_id: api_match_id || null,
     home_team, away_team, match_date,
-    stage:       stage       || 'Fase de Grupos',
-    group_name:  group_name  || null,
-    venue:       venue       || null,
-    home_score:  null,
-    away_score:  null,
-    status:      'upcoming',
-    created_at:  new Date().toISOString(),
+    stage:      stage      || 'Fase de Grupos',
+    group_name: group_name || null,
+    venue:      venue      || null,
+    home_score: null, away_score: null,
+    status:     'upcoming',
+    created_at: new Date().toISOString(),
   };
   db.matches.push(match);
+  persist();
+  return match;
+}
+
+function replaceGroupStage(newMatches) {
+  const db = load();
+  const oldIds = new Set(db.matches.filter(m => m.stage === 'Fase de Grupos').map(m => m.id));
+  db.matches = db.matches.filter(m => m.stage !== 'Fase de Grupos');
+  db.bets    = db.bets.filter(b => !oldIds.has(b.match_id));
+  db.feed    = db.feed.filter(f => !oldIds.has(f.match_id));
+  for (const m of newMatches) {
+    db.matches.push({
+      id: ++db._seq.matches,
+      api_match_id: m.api_match_id || null,
+      home_team:    m.home_team,
+      away_team:    m.away_team,
+      match_date:   m.match_date,
+      stage:        'Fase de Grupos',
+      group_name:   m.group_name || null,
+      venue:        m.venue || null,
+      home_score:   null, away_score: null,
+      status:       'upcoming',
+      created_at:   new Date().toISOString(),
+    });
+  }
+  persist();
+}
+
+function editMatch(id, { home_team, away_team, match_date, stage, group_name, venue }) {
+  const db = load();
+  const match = db.matches.find(m => m.id === id);
+  if (!match) return null;
+  if (home_team)  match.home_team  = home_team;
+  if (away_team)  match.away_team  = away_team;
+  if (match_date) match.match_date = match_date;
+  if (stage)      match.stage      = stage;
+  match.group_name = group_name ?? match.group_name;
+  match.venue      = venue      ?? match.venue;
   persist();
   return match;
 }
@@ -87,8 +136,8 @@ function setMatchResult(id, home_score, away_score) {
   match.away_score = away_score;
   match.status = 'finished';
 
-  // Recalculate points for every bet on this match
   const matchResult = Math.sign(home_score - away_score);
+  const betResults = [];
   db.bets.filter(b => b.match_id === id).forEach(bet => {
     if (bet.home_score === home_score && bet.away_score === away_score) {
       bet.points = 3;
@@ -97,7 +146,23 @@ function setMatchResult(id, home_score, away_score) {
     } else {
       bet.points = 0;
     }
+    betResults.push({ ...bet, user_name: db.users.find(u => u.id === bet.user_id)?.name });
   });
+
+  // Feed entry
+  db.feed.unshift({
+    id:         ++db._seq.feed,
+    type:       'match_result',
+    match_id:   match.id,
+    home_team:  match.home_team,
+    away_team:  match.away_team,
+    home_score, away_score,
+    timestamp:  new Date().toISOString(),
+    results:    betResults
+      .sort((a, b) => b.points - a.points)
+      .map(b => ({ user_name: b.user_name, home_score: b.home_score, away_score: b.away_score, points: b.points })),
+  });
+  if (db.feed.length > 50) db.feed = db.feed.slice(0, 50);
 
   persist();
   return match;
@@ -107,33 +172,23 @@ function deleteMatch(id) {
   const db = load();
   db.matches = db.matches.filter(m => m.id !== id);
   db.bets    = db.bets.filter(b => b.match_id !== id);
+  db.feed    = db.feed.filter(f => f.match_id !== id);
   persist();
 }
 
-// ── Bets ─────────────────────────────────────────────────────────────────────
+// ── Bets ──────────────────────────────────────────────────────────────────────
 
 function getBets({ user_id, match_id } = {}) {
   const db = load();
   return db.bets
-    .filter(b => (user_id == null || b.user_id === user_id) &&
-                 (match_id == null || b.match_id === match_id))
+    .filter(b =>
+      (user_id  == null || b.user_id  === user_id)  &&
+      (match_id == null || b.match_id === match_id))
     .map(b => {
       const u = db.users.find(u => u.id === b.user_id);
       const m = db.matches.find(m => m.id === b.match_id);
-      return {
-        ...b,
-        user_name:   u?.name,
-        home_team:   m?.home_team,
-        away_team:   m?.away_team,
-        match_home:  m?.home_score,
-        match_away:  m?.away_score,
-        status:      m?.status,
-      };
-    })
-    .sort((a, b) => {
-      const ma = db.matches.find(m => m.id === a.match_id);
-      const mb = db.matches.find(m => m.id === b.match_id);
-      return (ma?.match_date || '').localeCompare(mb?.match_date || '');
+      return { ...b, user_name: u?.name, home_team: m?.home_team, away_team: m?.away_team,
+                     match_home: m?.home_score, match_away: m?.away_score, status: m?.status };
     });
 }
 
@@ -144,89 +199,157 @@ function upsertBet({ user_id, match_id, home_score, away_score }) {
     bet.home_score = home_score;
     bet.away_score = away_score;
   } else {
-    bet = {
-      id: ++db._seq.bets,
-      user_id, match_id, home_score, away_score,
-      points: 0,
-      created_at: new Date().toISOString(),
-    };
+    bet = { id: ++db._seq.bets, user_id, match_id, home_score, away_score, points: 0, created_at: new Date().toISOString() };
     db.bets.push(bet);
   }
   persist();
   return bet;
 }
 
-// ── Leaderboard ──────────────────────────────────────────────────────────────
+// ── Special bets ──────────────────────────────────────────────────────────────
+
+function getSpecialBetsOpen() { return load().settings.special_bets_open; }
+
+function setSpecialBetsOpen(open) {
+  const db = load();
+  db.settings.special_bets_open = open;
+  persist();
+}
+
+function getChampionBets() {
+  const db = load();
+  return db.champion_bets.map(b => ({ ...b, user_name: db.users.find(u => u.id === b.user_id)?.name }));
+}
+
+function upsertChampionBet(user_id, team) {
+  const db = load();
+  let bet = db.champion_bets.find(b => b.user_id === user_id);
+  if (bet) { bet.team = team; } else { db.champion_bets.push({ user_id, team }); }
+  persist();
+}
+
+function getScorerBets() {
+  const db = load();
+  return db.scorer_bets.map(b => ({ ...b, user_name: db.users.find(u => u.id === b.user_id)?.name }));
+}
+
+function upsertScorerBet(user_id, name) {
+  const db = load();
+  let bet = db.scorer_bets.find(b => b.user_id === user_id);
+  if (bet) { bet.name = name; } else { db.scorer_bets.push({ user_id, name }); }
+  persist();
+}
+
+function setChampion(team) {
+  const db = load();
+  db.settings.champion = team;
+  // Award 10 pts in feed
+  const winners = db.champion_bets.filter(b => b.team.toLowerCase() === team.toLowerCase());
+  db.feed.unshift({
+    id:        ++db._seq.feed,
+    type:      'champion_result',
+    team,
+    timestamp: new Date().toISOString(),
+    results:   db.champion_bets.map(b => ({
+      user_name: db.users.find(u => u.id === b.user_id)?.name,
+      pick:      b.team,
+      points:    b.team.toLowerCase() === team.toLowerCase() ? 10 : 0,
+    })).sort((a, b) => b.points - a.points),
+  });
+  if (db.feed.length > 50) db.feed = db.feed.slice(0, 50);
+  persist();
+  return winners.length;
+}
+
+function setTopScorer(name) {
+  const db = load();
+  db.settings.top_scorer = name;
+  db.feed.unshift({
+    id:        ++db._seq.feed,
+    type:      'scorer_result',
+    name,
+    timestamp: new Date().toISOString(),
+    results:   db.scorer_bets.map(b => ({
+      user_name: db.users.find(u => u.id === b.user_id)?.name,
+      pick:      b.name,
+      points:    b.name.toLowerCase() === name.toLowerCase() ? 5 : 0,
+    })).sort((a, b) => b.points - a.points),
+  });
+  if (db.feed.length > 50) db.feed = db.feed.slice(0, 50);
+  persist();
+}
+
+// ── Feed ──────────────────────────────────────────────────────────────────────
+
+function getFeed() { return load().feed.slice(0, 20); }
+
+// ── Leaderboard ───────────────────────────────────────────────────────────────
 
 function getLeaderboard() {
   const db = load();
+  const champion  = db.settings.champion;
+  const topScorer = db.settings.top_scorer;
+
   return db.users.map(u => {
-    const myBets = db.bets.filter(b => b.user_id === u.id);
-    const finished = myBets.filter(b => {
-      const m = db.matches.find(m => m.id === b.match_id);
-      return m?.status === 'finished';
-    });
+    const myBets    = db.bets.filter(b => b.user_id === u.id);
+    const finished  = myBets.filter(b => db.matches.find(m => m.id === b.match_id)?.status === 'finished');
+    const matchPts  = myBets.reduce((s, b) => s + b.points, 0);
+
+    const champBet  = db.champion_bets.find(b => b.user_id === u.id);
+    const champPts  = champion && champBet && champBet.team.toLowerCase() === champion.toLowerCase() ? 10 : 0;
+
+    const scorerBet = db.scorer_bets.find(b => b.user_id === u.id);
+    const scorerPts = topScorer && scorerBet && scorerBet.name.toLowerCase() === topScorer.toLowerCase() ? 5 : 0;
+
     return {
-      id:              u.id,
-      name:            u.name,
-      total_points:    myBets.reduce((s, b) => s + b.points, 0),
+      id: u.id, name: u.name,
+      total_points:    matchPts + champPts + scorerPts,
+      match_points:    matchPts,
+      champion_points: champPts,
+      scorer_points:   scorerPts,
       total_bets:      myBets.length,
       exact_scores:    myBets.filter(b => b.points === 3).length,
       correct_results: myBets.filter(b => b.points === 1).length,
       wrong_bets:      finished.filter(b => b.points === 0).length,
     };
-  }).sort((a, b) =>
-    b.total_points - a.total_points ||
-    b.exact_scores - a.exact_scores ||
-    a.name.localeCompare(b.name)
-  );
+  }).sort((a, b) => b.total_points - a.total_points || b.exact_scores - a.exact_scores || a.name.localeCompare(b.name));
 }
 
-// ── Settings ─────────────────────────────────────────────────────────────────
+// ── Settings ──────────────────────────────────────────────────────────────────
 
-function getAdminPassword() {
-  return load().settings.admin_password;
-}
+function getSettings()            { const s = load().settings; return { champion: s.champion, top_scorer: s.top_scorer, special_bets_open: s.special_bets_open }; }
+function getAdminPassword()       { return load().settings.admin_password; }
+function setAdminPassword(pwd)    { const db = load(); db.settings.admin_password = pwd; persist(); }
+function getLastSync()            { return load().settings.last_sync || null; }
+function setLastSync(info)        { const db = load(); db.settings.last_sync = info; persist(); }
 
-function setAdminPassword(pwd) {
-  const db = load();
-  db.settings.admin_password = pwd;
-  persist();
-}
+// ── Seed ──────────────────────────────────────────────────────────────────────
 
-// ── Seed ─────────────────────────────────────────────────────────────────────
-
-function needsSeed() {
-  return load().matches.length === 0;
-}
+function needsSeed() { return load().matches.length === 0; }
 
 function addDays(base, days, hour) {
   const d = new Date(base + 'T12:00:00Z');
   d.setUTCDate(d.getUTCDate() + days);
-  const y  = d.getUTCFullYear();
-  const mo = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const dy = String(d.getUTCDate()).padStart(2, '0');
+  const [y, mo, dy] = [d.getUTCFullYear(), String(d.getUTCMonth() + 1).padStart(2, '0'), String(d.getUTCDate()).padStart(2, '0')];
   return `${y}-${mo}-${dy}T${String(hour).padStart(2, '0')}:00:00`;
 }
 
 function seed() {
+  // Real WC 2026 groups (confirmed)
   const groups = [
-    { name: 'A', teams: ['EUA',       'Panamá',     'Honduras',     'Jamaica'],          venues: ['Los Angeles', 'Seattle'] },
-    { name: 'B', teams: ['México',    'Equador',    'Venezuela',    'Costa Rica'],        venues: ['Cidade do México', 'Guadalajara'] },
-    { name: 'C', teams: ['Canadá',    'Ucrânia',    'Eslovênia',    'Noruega'],           venues: ['Toronto', 'Vancouver'] },
-    { name: 'D', teams: ['Argentina', 'Chile',      'Polônia',      'Marrocos'],          venues: ['Miami', 'Atlanta'] },
-    { name: 'E', teams: ['Brasil',    'Colômbia',   'Suíça',        'Costa do Marfim'],   venues: ['Dallas', 'Houston'] },
-    { name: 'F', teams: ['França',    'Senegal',    'Japão',        'Austrália'],         venues: ['New York/NJ', 'Boston'] },
-    { name: 'G', teams: ['Inglaterra','Nigéria',    'Irã',          'Dinamarca'],         venues: ['Philadelphia', 'Kansas City'] },
-    { name: 'H', teams: ['Espanha',   'Croácia',    'Coreia do Sul','Tunísia'],           venues: ['San Francisco', 'Los Angeles'] },
-    { name: 'I', teams: ['Portugal',  'Bélgica',    'Gana',         'Camarões'],          venues: ['Monterrey', 'Guadalajara'] },
-    { name: 'J', teams: ['Alemanha',  'Uruguai',    'Arábia Saudita','Sérvia'],           venues: ['Chicago', 'Kansas City'] },
-    { name: 'K', teams: ['Holanda',   'Paraguai',   'Egito',        'Turquia'],           venues: ['Dallas', 'Houston'] },
-    { name: 'L', teams: ['Itália',    'Áustria',    'Peru',         'Catar'],             venues: ['Miami', 'Atlanta'] },
+    { name: 'A', teams: ['México',       'África do Sul', 'Coreia do Sul', 'Tchéquia'],    venues: ['Los Angeles',   'Seattle'] },
+    { name: 'B', teams: ['Canadá',       'Bósnia',        'Catar',         'Suíça'],        venues: ['Toronto',       'Vancouver'] },
+    { name: 'C', teams: ['Brasil',       'Marrocos',      'Haiti',         'Escócia'],      venues: ['Dallas',        'Houston'] },
+    { name: 'D', teams: ['EUA',          'Paraguai',      'Austrália',     'Turquia'],      venues: ['New York/NJ',   'Los Angeles'] },
+    { name: 'E', teams: ['Alemanha',     'Curaçao',       'Costa do Marfim','Equador'],     venues: ['Chicago',       'Kansas City'] },
+    { name: 'F', teams: ['Holanda',      'Japão',         'Suécia',        'Tunísia'],      venues: ['Atlanta',       'Miami'] },
+    { name: 'G', teams: ['Bélgica',      'Egito',         'Irã',           'Nova Zelândia'],venues: ['Philadelphia',  'Boston'] },
+    { name: 'H', teams: ['Espanha',      'Cabo Verde',    'Arábia Saudita','Uruguai'],      venues: ['San Francisco', 'Seattle'] },
+    { name: 'I', teams: ['França',       'Senegal',       'Iraque',        'Noruega'],      venues: ['New York/NJ',   'Boston'] },
+    { name: 'J', teams: ['Argentina',    'Argélia',       'Áustria',       'Jordânia'],     venues: ['Miami',         'Atlanta'] },
+    { name: 'K', teams: ['Portugal',     'Congo RD',      'Uzbequistão',   'Colômbia'],     venues: ['Monterrey',     'Guadalajara'] },
+    { name: 'L', teams: ['Inglaterra',   'Croácia',       'Gana',          'Panamá'],       venues: ['Kansas City',   'Dallas'] },
   ];
-
-  // Group stage: June 11 → July 15, 2026
-  // Each group: Matchday 1 on day gi, MD2 on day 12+gi, MD3 on day 24+gi
   groups.forEach((group, gi) => {
     const [t1, t2, t3, t4] = group.teams;
     const [v1, v2] = group.venues;
@@ -241,9 +364,14 @@ function seed() {
 
 module.exports = {
   getUsers, getUserById, createUser,
-  getMatches, getMatchById, createMatch, setMatchResult, deleteMatch,
+  getMatches, getMatchById, createMatch, editMatch, setMatchResult, deleteMatch, replaceGroupStage,
   getBets, upsertBet,
+  getSpecialBetsOpen, setSpecialBetsOpen,
+  getChampionBets, upsertChampionBet, setChampion,
+  getScorerBets, upsertScorerBet, setTopScorer,
+  getFeed,
   getLeaderboard,
-  getAdminPassword, setAdminPassword,
+  getSettings, getAdminPassword, setAdminPassword,
+  getLastSync, setLastSync,
   needsSeed, seed,
 };

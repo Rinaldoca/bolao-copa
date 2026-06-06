@@ -1,6 +1,17 @@
 const express = require('express');
 const path    = require('path');
+const fs      = require('fs');
+
+// Load .env for local dev (Railway injects vars directly)
+try {
+  fs.readFileSync(path.join(__dirname, '.env'), 'utf8').split('\n').forEach(line => {
+    const m = line.match(/^([A-Z0-9_]+)=(.+)$/);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].trim();
+  });
+} catch {}
+
 const db      = require('./db');
+const { syncMatches, importGroupStage } = require('./sync');
 
 const app = express();
 app.use(express.json());
@@ -8,7 +19,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 if (db.needsSeed()) db.seed();
 
-// ── Users ────────────────────────────────────────────────────────────────────
+// ── Users ─────────────────────────────────────────────────────────────────────
 
 app.get('/api/users', (req, res) => {
   res.json(db.getUsers().map(u => ({ id: u.id, name: u.name })));
@@ -26,34 +37,30 @@ app.post('/api/users', (req, res) => {
   }
 });
 
-// ── Matches ──────────────────────────────────────────────────────────────────
+// ── Matches ───────────────────────────────────────────────────────────────────
 
-app.get('/api/matches', (req, res) => {
-  res.json(db.getMatches());
-});
+app.get('/api/matches', (req, res) => res.json(db.getMatches()));
 
 app.post('/api/matches', (req, res) => {
   const { password, home_team, away_team, match_date, stage, group_name, venue } = req.body;
   if (!auth(password)) return res.status(403).json({ error: 'Senha incorreta' });
-  if (!home_team || !away_team || !match_date)
-    return res.status(400).json({ error: 'Times e data são obrigatórios' });
-  res.json(db.createMatch({
-    home_team: home_team.trim(),
-    away_team: away_team.trim(),
-    match_date,
-    stage: stage || 'Fase de Grupos',
-    group_name: group_name || null,
-    venue: venue || null,
-  }));
+  if (!home_team || !away_team || !match_date) return res.status(400).json({ error: 'Times e data são obrigatórios' });
+  res.json(db.createMatch({ home_team: home_team.trim(), away_team: away_team.trim(), match_date, stage, group_name: group_name || null, venue: venue || null }));
+});
+
+app.put('/api/matches/:id', (req, res) => {
+  const { password, home_team, away_team, match_date, stage, group_name, venue } = req.body;
+  if (!auth(password)) return res.status(403).json({ error: 'Senha incorreta' });
+  const match = db.editMatch(Number(req.params.id), { home_team, away_team, match_date, stage, group_name, venue });
+  if (!match) return res.status(404).json({ error: 'Partida não encontrada' });
+  res.json(match);
 });
 
 app.put('/api/matches/:id/result', (req, res) => {
   const { password, home_score, away_score } = req.body;
   if (!auth(password)) return res.status(403).json({ error: 'Senha incorreta' });
-  const hs  = parseInt(home_score);
-  const as_ = parseInt(away_score);
-  if (isNaN(hs) || isNaN(as_) || hs < 0 || as_ < 0)
-    return res.status(400).json({ error: 'Placar inválido' });
+  const hs = parseInt(home_score), as_ = parseInt(away_score);
+  if (isNaN(hs) || isNaN(as_) || hs < 0 || as_ < 0) return res.status(400).json({ error: 'Placar inválido' });
   const match = db.setMatchResult(Number(req.params.id), hs, as_);
   if (!match) return res.status(404).json({ error: 'Partida não encontrada' });
   res.json(match);
@@ -65,7 +72,7 @@ app.delete('/api/matches/:id', (req, res) => {
   res.json({ success: true });
 });
 
-// ── Bets ─────────────────────────────────────────────────────────────────────
+// ── Bets ──────────────────────────────────────────────────────────────────────
 
 app.get('/api/bets', (req, res) => {
   const user_id  = req.query.user_id  ? Number(req.query.user_id)  : null;
@@ -76,49 +83,129 @@ app.get('/api/bets', (req, res) => {
 app.post('/api/bets', (req, res) => {
   const { user_id, match_id, home_score, away_score } = req.body;
   const match = db.getMatchById(Number(match_id));
-  if (!match) return res.status(404).json({ error: 'Partida não encontrada' });
-  if (match.status !== 'upcoming') return res.status(400).json({ error: 'Partida já encerrada' });
-  if (new Date() > new Date(match.match_date))
-    return res.status(400).json({ error: 'Prazo de apostas encerrado' });
-  const hs  = parseInt(home_score);
-  const as_ = parseInt(away_score);
-  if (isNaN(hs) || isNaN(as_) || hs < 0 || as_ < 0)
-    return res.status(400).json({ error: 'Placar inválido' });
+  if (!match)                             return res.status(404).json({ error: 'Partida não encontrada' });
+  if (match.status !== 'upcoming')        return res.status(400).json({ error: 'Partida já encerrada' });
+  if (new Date() > new Date(match.match_date)) return res.status(400).json({ error: 'Prazo de apostas encerrado' });
+  const hs = parseInt(home_score), as_ = parseInt(away_score);
+  if (isNaN(hs) || isNaN(as_) || hs < 0 || as_ < 0) return res.status(400).json({ error: 'Placar inválido' });
   res.json(db.upsertBet({ user_id: Number(user_id), match_id: Number(match_id), home_score: hs, away_score: as_ }));
 });
 
-// ── Leaderboard ──────────────────────────────────────────────────────────────
+// ── Special bets ──────────────────────────────────────────────────────────────
 
-app.get('/api/leaderboard', (req, res) => {
-  res.json(db.getLeaderboard());
+app.get('/api/special-bets', (req, res) => {
+  res.json({
+    champion_bets:      db.getChampionBets(),
+    scorer_bets:        db.getScorerBets(),
+    special_bets_open:  db.getSpecialBetsOpen(),
+    champion:           db.getSettings().champion,
+    top_scorer:         db.getSettings().top_scorer,
+  });
+});
+
+app.post('/api/champion-bet', (req, res) => {
+  const { user_id, team } = req.body;
+  if (!db.getSpecialBetsOpen()) return res.status(400).json({ error: 'Apostas especiais encerradas' });
+  if (!team?.trim()) return res.status(400).json({ error: 'Informe o nome do time' });
+  db.upsertChampionBet(Number(user_id), team.trim());
+  res.json({ success: true });
+});
+
+app.post('/api/scorer-bet', (req, res) => {
+  const { user_id, name } = req.body;
+  if (!db.getSpecialBetsOpen()) return res.status(400).json({ error: 'Apostas especiais encerradas' });
+  if (!name?.trim()) return res.status(400).json({ error: 'Informe o nome do jogador' });
+  db.upsertScorerBet(Number(user_id), name.trim());
+  res.json({ success: true });
 });
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
 
 app.post('/api/admin/verify', (req, res) => {
-  if (auth(req.body.password)) res.json({ success: true });
-  else res.status(403).json({ error: 'Senha incorreta' });
+  auth(req.body.password) ? res.json({ success: true }) : res.status(403).json({ error: 'Senha incorreta' });
 });
 
 app.put('/api/admin/password', (req, res) => {
   const { password, new_password } = req.body;
   if (!auth(password)) return res.status(403).json({ error: 'Senha incorreta' });
-  if (!new_password || new_password.length < 4)
-    return res.status(400).json({ error: 'Nova senha muito curta (mínimo 4 caracteres)' });
+  if (!new_password || new_password.length < 4) return res.status(400).json({ error: 'Nova senha muito curta' });
   db.setAdminPassword(new_password);
   res.json({ success: true });
 });
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+app.put('/api/admin/special-bets', (req, res) => {
+  if (!auth(req.body.password)) return res.status(403).json({ error: 'Senha incorreta' });
+  db.setSpecialBetsOpen(!!req.body.open);
+  res.json({ success: true });
+});
 
-function auth(password) {
-  return password === db.getAdminPassword();
-}
+app.put('/api/admin/champion', (req, res) => {
+  const { password, team } = req.body;
+  if (!auth(password)) return res.status(403).json({ error: 'Senha incorreta' });
+  if (!team?.trim()) return res.status(400).json({ error: 'Informe o nome do time' });
+  const winners = db.setChampion(team.trim());
+  res.json({ success: true, winners });
+});
+
+app.put('/api/admin/top-scorer', (req, res) => {
+  const { password, name } = req.body;
+  if (!auth(password)) return res.status(403).json({ error: 'Senha incorreta' });
+  if (!name?.trim()) return res.status(400).json({ error: 'Informe o nome do jogador' });
+  db.setTopScorer(name.trim());
+  res.json({ success: true });
+});
+
+// ── Sync ──────────────────────────────────────────────────────────────────────
+
+app.get('/api/admin/sync-status', (req, res) => {
+  res.json({ last_sync: db.getLastSync(), has_api_key: !!process.env.FOOTBALL_API_KEY });
+});
+
+app.post('/api/admin/sync', async (req, res) => {
+  if (!auth(req.body.password)) return res.status(403).json({ error: 'Senha incorreta' });
+  try {
+    const result = await syncMatches();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+app.post('/api/admin/import-matches', async (req, res) => {
+  if (!auth(req.body.password)) return res.status(403).json({ error: 'Senha incorreta' });
+  try {
+    const result = await importGroupStage();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ── Leaderboard & Feed ────────────────────────────────────────────────────────
+
+app.get('/api/leaderboard', (req, res) => res.json(db.getLeaderboard()));
+app.get('/api/feed',        (req, res) => res.json(db.getFeed()));
+
+// ── Helper ────────────────────────────────────────────────────────────────────
+
+function auth(password) { return password === db.getAdminPassword(); }
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`\n⚽  Bolão Copa 2026 → http://localhost:${PORT}`);
-  console.log(`🔑  Senha admin padrão: bolao2026\n`);
+  console.log(`🔑  Senha admin padrão: bolao2026`);
+  console.log(`🔄  Sync API: ${process.env.FOOTBALL_API_KEY ? 'configurada ✓' : 'FOOTBALL_API_KEY não configurada'}\n`);
 });
+
+// Auto-sync every 5 minutes while there are pending matches
+function autoSync() {
+  const now = new Date();
+  const hasPending = db.getMatches().some(m => m.status === 'upcoming' && new Date(m.match_date) < now);
+  if (hasPending && process.env.FOOTBALL_API_KEY) {
+    syncMatches().catch(err => console.error('[sync] Erro:', err.message));
+  }
+}
+setInterval(autoSync, 5 * 60 * 1000);
+setTimeout(autoSync, 15 * 1000); // first run 15s after startup

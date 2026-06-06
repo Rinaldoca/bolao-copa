@@ -25,53 +25,99 @@
       </button>
     </div>
     <nav class="tab-bar">
-      <button class="tab active" data-tab="leaderboard" onclick="showTab('leaderboard')">🏆 Classificação</button>
-      <button class="tab" data-tab="matches" onclick="showTab('matches')">⚽ Partidas</button>
-      <button class="tab" data-tab="admin" onclick="showTab('admin')">⚙️ Admin</button>
+      <button class="tab active" data-tab="leaderboard" onclick="showTab('leaderboard')">🏆 Placar</button>
+      <button class="tab" data-tab="bracket"     onclick="showTab('bracket')">🗂 Chaveamento</button>
+      <button class="tab" data-tab="matches"     onclick="showTab('matches')">⚽ Partidas</button>
+      <button class="tab" data-tab="me"          onclick="showTab('me')">👤 Eu</button>
+      <button class="tab" data-tab="admin"       onclick="showTab('admin')">⚙️ Admin</button>
     </nav>
   </header>
 
   <main>
 
-    <!-- ── Leaderboard ── -->
+    <!-- ──────────── CLASSIFICAÇÃO ──────────── -->
     <section id="tab-leaderboard" class="tab-pane">
       <div class="pane-header">
         <div>
-          <h2>Classificação Geral</h2>
-          <p class="pane-sub">🎯 Placar exato: <strong>3 pts</strong> &nbsp;·&nbsp; ✅ Resultado certo: <strong>1 pt</strong></p>
+          <h2>Placar</h2>
+          <p class="pane-sub">🎯 Exato <strong>3 pts</strong> &nbsp;·&nbsp; ✅ Resultado <strong>1 pt</strong> &nbsp;·&nbsp; 🏆 Campeão <strong>10 pts</strong> &nbsp;·&nbsp; ⚽ Artilheiro <strong>5 pts</strong></p>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="loadLeaderboard()">↻ Atualizar</button>
+        <button class="btn btn-ghost btn-sm" onclick="loadAll()">↻</button>
       </div>
-      <div id="leaderboard-container"></div>
+      <div id="lb-container"></div>
+      <div class="section-divider"><span>🏆 Palpites de Campeão &amp; Artilheiro</span></div>
+      <div class="special-grid" id="special-grid"></div>
+      <div class="section-divider"><span>⚡ Feed de Resultados</span></div>
+      <div id="feed-container"></div>
     </section>
 
-    <!-- ── Matches ── -->
+    <!-- ──────────── CHAVEAMENTO ──────────── -->
+    <section id="tab-bracket" class="tab-pane hidden">
+      <div class="pane-header">
+        <div><h2>Chaveamento</h2></div>
+        <button class="btn btn-ghost btn-sm" onclick="renderBracketTab()">↻</button>
+      </div>
+
+      <!-- Inner sub-tabs -->
+      <div class="inner-tabs">
+        <button class="inner-tab active" onclick="showBracketTab('standings', this)">📊 Classificação das Seleções</button>
+        <button class="inner-tab"        onclick="showBracketTab('bracket',   this)">🏆 Chaveamento</button>
+      </div>
+
+      <div id="brtab-standings">
+        <div id="group-standings-container"></div>
+      </div>
+      <div id="brtab-bracket" class="hidden">
+        <p class="pane-sub" style="margin-bottom:16px">As partidas são adicionadas pelo admin conforme os times se classificam.</p>
+        <div id="bracket-container"></div>
+      </div>
+    </section>
+
+    <!-- ──────────── PARTIDAS ──────────── -->
     <section id="tab-matches" class="tab-pane hidden">
       <div class="pane-header">
         <div>
           <h2>Partidas</h2>
           <p id="matches-user-hint" class="pane-sub"></p>
         </div>
-        <div class="filter-pills">
-          <button class="pill active" onclick="setFilter('all', this)">Todas</button>
-          <button class="pill" onclick="setFilter('upcoming', this)">Abertas</button>
-          <button class="pill" onclick="setFilter('finished', this)">Encerradas</button>
+      </div>
+      <div class="filter-row">
+        <div class="filter-group" id="status-pills">
+          <button class="pill active" onclick="setStatusFilter('all',this)">Todas</button>
+          <button class="pill" onclick="setStatusFilter('upcoming',this)">Abertas</button>
+          <button class="pill" onclick="setStatusFilter('finished',this)">Encerradas</button>
         </div>
       </div>
+      <div class="filter-row" id="stage-pills-row" style="margin-top:8px"></div>
+      <div class="filter-row" id="view-toggle-row" style="margin-top:8px"></div>
       <div id="matches-container"></div>
     </section>
 
-    <!-- ── Admin ── -->
-    <section id="tab-admin" class="tab-pane hidden">
-      <div class="pane-header">
-        <div><h2>Administração</h2></div>
+    <!-- ──────────── EU ──────────── -->
+    <section id="tab-me" class="tab-pane hidden">
+      <div id="me-no-user" class="empty">
+        <span class="icon">👤</span>
+        <p>Selecione seu perfil para ver sua página.</p>
+        <button class="btn btn-primary" style="margin-top:14px" onclick="openUserModal()">Entrar</button>
       </div>
+      <div id="me-content" class="hidden">
+        <div class="me-header" id="me-header"></div>
+        <div class="me-stats" id="me-stats"></div>
+        <div class="special-grid" id="me-special"></div>
+        <div class="section-divider"><span>Meus Palpites</span></div>
+        <div id="me-bets"></div>
+      </div>
+    </section>
+
+    <!-- ──────────── ADMIN ──────────── -->
+    <section id="tab-admin" class="tab-pane hidden">
+      <div class="pane-header"><div><h2>Administração</h2></div></div>
 
       <div id="admin-login-card" class="card">
         <h3>🔐 Acesso restrito</h3>
         <p class="card-sub">Digite a senha de administrador para continuar.</p>
         <div class="field-row">
-          <input type="password" id="adminPasswordInput" class="input" placeholder="Senha admin"
+          <input type="password" id="adminPwdInput" class="input" placeholder="Senha admin"
             onkeydown="if(event.key==='Enter') adminLogin()">
           <button class="btn btn-primary" onclick="adminLogin()">Entrar</button>
         </div>
@@ -79,20 +125,56 @@
 
       <div id="admin-panel" class="hidden">
 
+        <!-- Sync -->
+        <div class="card">
+          <h3>🔄 Sincronização Automática</h3>
+          <p class="card-sub">Busca resultados automaticamente na API football-data.org a cada 5 minutos.</p>
+          <div id="sync-status" class="mb-12"></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-secondary" onclick="adminSync()">↻ Sincronizar resultados</button>
+            <button class="btn btn-ghost" onclick="adminImportMatches()">📥 Importar partidas da API</button>
+          </div>
+          <p class="card-sub" style="margin-top:8px">⚠️ <em>Importar partidas</em> substitui todas as partidas da Fase de Grupos e apaga palpites existentes.</p>
+        </div>
+
+        <!-- Special bets control -->
+        <div class="card">
+          <h3>🏆 Palpites Especiais</h3>
+          <p class="card-sub">Abrir/fechar apostas de campeão e artilheiro, e registrar os resultados ao final.</p>
+          <div id="admin-special-status" class="mb-12"></div>
+          <div class="admin-special-grid">
+            <div>
+              <label class="field-label">Campeão real</label>
+              <div class="field-row">
+                <input type="text" id="championInput" class="input" placeholder="Nome do time campeão">
+                <button class="btn btn-primary" onclick="adminSetChampion()">Definir</button>
+              </div>
+            </div>
+            <div>
+              <label class="field-label">Artilheiro real</label>
+              <div class="field-row">
+                <input type="text" id="scorerInput" class="input" placeholder="Nome do artilheiro">
+                <button class="btn btn-primary" onclick="adminSetScorer()">Definir</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Match results -->
         <div class="card">
           <h3>📝 Registrar Resultado</h3>
-          <p class="card-sub">Selecione uma partida encerrada e insira o placar oficial.</p>
           <div id="admin-match-list"></div>
         </div>
 
+        <!-- Add match -->
         <div class="card">
           <h3>➕ Adicionar Partida</h3>
           <div class="form-grid">
-            <input type="text" id="f-home" class="input" placeholder="Time da casa *">
-            <input type="text" id="f-away" class="input" placeholder="Time visitante *">
-            <input type="datetime-local" id="f-date" class="input">
-            <input type="text" id="f-group" class="input" placeholder="Grupo (ex: A, B…)">
-            <select id="f-stage" class="input">
+            <input type="text"           id="f-home"  class="input" placeholder="Time da casa *">
+            <input type="text"           id="f-away"  class="input" placeholder="Time visitante *">
+            <input type="datetime-local" id="f-date"  class="input">
+            <input type="text"           id="f-group" class="input" placeholder="Grupo (ex: A)">
+            <select                      id="f-stage" class="input">
               <option value="Fase de Grupos">Fase de Grupos</option>
               <option value="Oitavas de Final">Oitavas de Final</option>
               <option value="Quartas de Final">Quartas de Final</option>
@@ -100,11 +182,12 @@
               <option value="Terceiro Lugar">Terceiro Lugar</option>
               <option value="Final">Final</option>
             </select>
-            <input type="text" id="f-venue" class="input" placeholder="Cidade / Estádio">
+            <input type="text"           id="f-venue" class="input" placeholder="Cidade / Estádio">
           </div>
-          <button class="btn btn-primary" onclick="adminAddMatch()">Adicionar Partida</button>
+          <button class="btn btn-primary" onclick="adminAddMatch()">Adicionar</button>
         </div>
 
+        <!-- Change password -->
         <div class="card">
           <h3>🔑 Alterar Senha</h3>
           <div class="field-row">
@@ -118,19 +201,47 @@
 
   </main>
 
-  <!-- ── User Modal ── -->
+  <!-- ──────────── USER MODAL ──────────── -->
   <div id="modal-overlay" class="modal-overlay hidden" onclick="closeUserModal()"></div>
   <div id="user-modal" class="modal hidden">
     <div class="modal-header">
       <h3>Selecionar jogador</h3>
       <button class="close-btn" onclick="closeUserModal()">✕</button>
     </div>
-    <div id="users-list-container"></div>
+    <div id="users-list-wrap"></div>
     <div class="modal-sep">ou crie seu perfil</div>
     <div class="field-row">
       <input type="text" id="newUserInput" class="input" placeholder="Seu nome" maxlength="30"
         onkeydown="if(event.key==='Enter') createUser()">
       <button class="btn btn-primary" onclick="createUser()">Criar</button>
+    </div>
+  </div>
+
+  <!-- ──────────── EDIT MATCH MODAL ──────────── -->
+  <div id="edit-modal-overlay" class="modal-overlay hidden" onclick="closeEditModal()"></div>
+  <div id="edit-modal" class="modal hidden" style="max-width:480px">
+    <div class="modal-header">
+      <h3>Editar Partida</h3>
+      <button class="close-btn" onclick="closeEditModal()">✕</button>
+    </div>
+    <div class="form-grid">
+      <input type="text"           id="em-home"  class="input" placeholder="Time da casa">
+      <input type="text"           id="em-away"  class="input" placeholder="Time visitante">
+      <input type="datetime-local" id="em-date"  class="input">
+      <input type="text"           id="em-group" class="input" placeholder="Grupo">
+      <select                      id="em-stage" class="input">
+        <option value="Fase de Grupos">Fase de Grupos</option>
+        <option value="Oitavas de Final">Oitavas de Final</option>
+        <option value="Quartas de Final">Quartas de Final</option>
+        <option value="Semifinal">Semifinal</option>
+        <option value="Terceiro Lugar">Terceiro Lugar</option>
+        <option value="Final">Final</option>
+      </select>
+      <input type="text"           id="em-venue" class="input" placeholder="Cidade / Estádio">
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-secondary" onclick="closeEditModal()">Cancelar</button>
+      <button class="btn btn-primary"   onclick="adminSaveEdit()">Salvar</button>
     </div>
   </div>
 
