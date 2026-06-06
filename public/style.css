@@ -499,10 +499,12 @@ main { max-width: 860px; margin: 0 auto; padding: 28px 20px 60px; }
 .sg-neg { color: var(--red); font-weight: 700; }
 tr.classified td:first-child { border-left: 3px solid var(--green); }
 tr.possible   td:first-child { border-left: 3px solid var(--gold); }
+tr.eliminated td:first-child { border-left: 3px solid var(--red); }
 .standings-legend { font-size: .75rem; color: var(--text-3); margin-top: 8px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 0 4px 8px; }
 .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
 .legend-dot.classified { background: var(--green); }
 .legend-dot.possible   { background: var(--gold); }
+.legend-dot.eliminated { background: var(--red); }
 
 /* ─── My page ────────────────────────────────────────────────────────────── */
 .me-header {
