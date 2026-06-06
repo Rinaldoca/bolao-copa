@@ -18,6 +18,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (saved) setUser(JSON.parse(saved), false);
   } catch {}
   loadAll();
+  // Delegated handler for group collapse buttons (avoids inline-onclick quoting issues)
+  document.getElementById('matches-container').addEventListener('click', e => {
+    const btn = e.target.closest('.group-header');
+    if (btn && btn.dataset.gkey !== undefined) toggleGroup(btn.dataset.gkey);
+  });
 });
 
 async function loadAll() {
@@ -616,7 +621,7 @@ function renderSections(list, keyFn, labelFn) {
 
     return `
       <div class="match-group">
-        <button class="group-header" onclick="toggleGroup(${JSON.stringify(key)})">
+        <button class="group-header" data-gkey="${key.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}">
           <span class="group-chevron ${collapsed ? '' : 'open'}">›</span>
           <div class="group-info">
             <span class="group-name">${name}</span>
