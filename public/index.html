@@ -60,12 +60,16 @@
 
       <!-- Inner sub-tabs -->
       <div class="inner-tabs">
-        <button class="inner-tab active" onclick="showBracketTab('standings', this)">📊 Classificação das Seleções</button>
+        <button class="inner-tab active" onclick="showBracketTab('standings', this)">📊 Grupos</button>
+        <button class="inner-tab"        onclick="showBracketTab('thirds',    this)">🥉 Terceiros</button>
         <button class="inner-tab"        onclick="showBracketTab('bracket',   this)">🏆 Chaveamento</button>
       </div>
 
       <div id="brtab-standings">
         <div id="group-standings-container"></div>
+      </div>
+      <div id="brtab-thirds" class="hidden">
+        <div id="thirds-container"></div>
       </div>
       <div id="brtab-bracket" class="hidden">
         <p class="pane-sub" style="margin-bottom:16px">As partidas são adicionadas pelo admin conforme os times se classificam.</p>

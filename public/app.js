@@ -140,6 +140,7 @@ async function loadLeaderboard() {
 /* ─── Bracket tab ───────────────────────────────────────────────────────── */
 function renderBracketTab() {
   renderGroupStandings();
+  renderThirdsRanking();
   renderBracket();
 }
 
@@ -147,23 +148,15 @@ function showBracketTab(tab, btn) {
   document.querySelectorAll('#tab-bracket .inner-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('brtab-standings').classList.toggle('hidden', tab !== 'standings');
+  document.getElementById('brtab-thirds').classList.toggle('hidden',    tab !== 'thirds');
   document.getElementById('brtab-bracket').classList.toggle('hidden',   tab !== 'bracket');
 }
 
 /* ─── Group standings ────────────────────────────────────────────────────── */
-function renderGroupStandings() {
-  const wrap = document.getElementById('group-standings-container');
-  if (!wrap) return;
 
-  const groupMatches = allMatches.filter(m => m.stage === 'Fase de Grupos');
-  if (!groupMatches.length) {
-    wrap.innerHTML = '<div class="empty"><span class="icon">📊</span>Nenhuma partida da fase de grupos cadastrada.</div>';
-    return;
-  }
-
-  // Build per-group standings
+function buildGroupStandings() {
   const groups = {};
-  groupMatches.forEach(m => {
+  allMatches.filter(m => m.stage === 'Fase de Grupos').forEach(m => {
     const g = m.group_name || '?';
     if (!groups[g]) groups[g] = {};
     [m.home_team, m.away_team].forEach(team => {
@@ -180,93 +173,105 @@ function renderGroupStandings() {
       else               { h.E++; h.Pts++;    a.E++; a.Pts++; }
     }
   });
+  return Object.entries(groups)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([name, teams]) => ({
+      name,
+      sorted: Object.values(teams).sort((a, b) =>
+        (b.Pts - a.Pts) || ((b.GP - b.GC) - (a.GP - a.GC)) || (b.GP - a.GP) || a.team.localeCompare(b.team)
+      ),
+    }));
+}
 
-  const sortedGroups = Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+function standingsRow(t, i, extraCells = '') {
+  const sg = t.GP - t.GC;
+  return `<tr class="${i < 2 ? 'classified' : i === 2 ? 'possible' : ''}">
+    <td class="td-pos">${i + 1}</td>
+    <td class="td-team">${t.team}</td>
+    ${extraCells}
+    <td>${t.J}</td><td>${t.V}</td><td>${t.E}</td><td>${t.D}</td>
+    <td>${t.GP}</td><td>${t.GC}</td>
+    <td class="${sg > 0 ? 'sg-pos' : sg < 0 ? 'sg-neg' : ''}">${sg > 0 ? '+' : ''}${sg}</td>
+    <td class="td-pts">${t.Pts}</td>
+  </tr>`;
+}
 
-  const thirds = [];
+function renderGroupStandings() {
+  const wrap = document.getElementById('group-standings-container');
+  if (!wrap) return;
+  const groups = buildGroupStandings();
+  if (!groups.length) {
+    wrap.innerHTML = '<div class="empty"><span class="icon">📊</span>Nenhuma partida da fase de grupos cadastrada.</div>';
+    return;
+  }
+  wrap.innerHTML = `
+    <div class="standings-grid">
+      ${groups.map(({ name, sorted }) => `
+        <div class="standings-group">
+          <div class="standings-title">Grupo ${name}</div>
+          <table class="standings-table">
+            <thead><tr>
+              <th></th><th class="th-team">Seleção</th>
+              <th title="Jogos">J</th><th title="Vitórias">V</th>
+              <th title="Empates">E</th><th title="Derrotas">D</th>
+              <th title="Gols pró">GP</th><th title="Gols contra">GC</th>
+              <th title="Saldo">SG</th><th class="th-pts" title="Pontos">Pts</th>
+            </tr></thead>
+            <tbody>${sorted.map((t, i) => standingsRow(t, i)).join('')}</tbody>
+          </table>
+        </div>`).join('')}
+    </div>
+    <p class="standings-legend">
+      <span class="legend-dot classified"></span> 1º e 2º classificados &nbsp;·&nbsp;
+      <span class="legend-dot possible"></span> 3º lugar
+    </p>`;
+}
 
-  const groupGrid = `<div class="standings-grid">` + sortedGroups.map(([groupName, teams]) => {
-    const sorted = Object.values(teams).sort((a, b) =>
-      (b.Pts - a.Pts) || ((b.GP - b.GC) - (a.GP - a.GC)) || (b.GP - a.GP) || a.team.localeCompare(b.team)
-    );
-    if (sorted[2]) thirds.push({ ...sorted[2], group: groupName });
-    return `
-      <div class="standings-group">
-        <div class="standings-title">Grupo ${groupName}</div>
-        <table class="standings-table">
-          <thead><tr>
-            <th></th><th class="th-team">Seleção</th>
-            <th title="Jogos">J</th><th title="Vitórias">V</th>
-            <th title="Empates">E</th><th title="Derrotas">D</th>
-            <th title="Gols pró">GP</th><th title="Gols contra">GC</th>
-            <th title="Saldo">SG</th><th title="Pontos" class="th-pts">Pts</th>
-          </tr></thead>
-          <tbody>
-            ${sorted.map((t, i) => {
-              const sg = t.GP - t.GC;
-              const rowClass = i < 2 ? 'classified' : i === 2 ? 'possible' : '';
-              return `<tr class="${rowClass}">
-                <td class="td-pos">${i + 1}</td>
-                <td class="td-team">${t.team}</td>
-                <td>${t.J}</td><td>${t.V}</td><td>${t.E}</td><td>${t.D}</td>
-                <td>${t.GP}</td><td>${t.GC}</td>
-                <td class="${sg > 0 ? 'sg-pos' : sg < 0 ? 'sg-neg' : ''}">${sg > 0 ? '+' : ''}${sg}</td>
-                <td class="td-pts">${t.Pts}</td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>`;
-  }).join('') + `</div>
-  <p class="standings-legend">
-    <span class="legend-dot classified"></span> 1º e 2º classificados
-    &nbsp;·&nbsp;
-    <span class="legend-dot possible"></span> 3º lugar (ranking abaixo)
-  </p>`;
+function renderThirdsRanking() {
+  const wrap = document.getElementById('thirds-container');
+  if (!wrap) return;
+  const groups = buildGroupStandings();
+  if (!groups.length) {
+    wrap.innerHTML = '<div class="empty"><span class="icon">🥉</span>Nenhuma partida da fase de grupos cadastrada.</div>';
+    return;
+  }
+  const thirds = groups
+    .filter(g => g.sorted[2])
+    .map(g => ({ ...g.sorted[2], group: g.name }))
+    .sort((a, b) => (b.Pts - a.Pts) || ((b.GP - b.GC) - (a.GP - a.GC)) || (b.GP - a.GP) || a.team.localeCompare(b.team));
 
-  // Ranking of third-place teams (top 8 advance)
-  const thirdsRanked = thirds.sort((a, b) =>
-    (b.Pts - a.Pts) || ((b.GP - b.GC) - (a.GP - a.GC)) || (b.GP - a.GP) || a.team.localeCompare(b.team)
-  );
-
-  const thirdsTable = thirds.length === 0 ? '' : `
-    <div class="thirds-section">
-      <div class="section-divider" style="margin:24px 0 16px"><span>🥉 Ranking dos Terceiros Colocados</span></div>
-      <p class="pane-sub" style="margin-bottom:12px">As 8 melhores terceiras colocadas (de 12 grupos) avançam para as oitavas de final.</p>
-      <div class="standings-group" style="max-width:560px">
-        <table class="standings-table">
-          <thead><tr>
-            <th></th><th class="th-team">Seleção</th><th title="Grupo">Gr</th>
-            <th title="Jogos">J</th><th title="Vitórias">V</th>
-            <th title="Empates">E</th><th title="Derrotas">D</th>
-            <th title="Gols pró">GP</th><th title="Gols contra">GC</th>
-            <th title="Saldo">SG</th><th title="Pontos" class="th-pts">Pts</th>
-          </tr></thead>
-          <tbody>
-            ${thirdsRanked.map((t, i) => {
-              const sg = t.GP - t.GC;
-              const rowClass = i < 8 ? 'classified' : 'eliminated';
-              return `<tr class="${rowClass}">
-                <td class="td-pos">${i + 1}</td>
-                <td class="td-team">${t.team}</td>
-                <td style="color:var(--text-3);font-size:.78rem">${t.group}</td>
-                <td>${t.J}</td><td>${t.V}</td><td>${t.E}</td><td>${t.D}</td>
-                <td>${t.GP}</td><td>${t.GC}</td>
-                <td class="${sg > 0 ? 'sg-pos' : sg < 0 ? 'sg-neg' : ''}">${sg > 0 ? '+' : ''}${sg}</td>
-                <td class="td-pts">${t.Pts}</td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>
-      <p class="standings-legend" style="max-width:560px">
-        <span class="legend-dot classified"></span> Avança para as oitavas
-        &nbsp;·&nbsp;
-        <span class="legend-dot eliminated"></span> Eliminado
-      </p>
-    </div>`;
-
-  wrap.innerHTML = groupGrid + thirdsTable;
+  wrap.innerHTML = `
+    <p class="pane-sub" style="margin-bottom:16px">As <strong>8 melhores</strong> terceiras colocadas (de 12 grupos) avançam para as oitavas de final.</p>
+    <div class="standings-group" style="max-width:580px">
+      <table class="standings-table">
+        <thead><tr>
+          <th></th><th class="th-team">Seleção</th><th title="Grupo">Gr</th>
+          <th title="Jogos">J</th><th title="Vitórias">V</th>
+          <th title="Empates">E</th><th title="Derrotas">D</th>
+          <th title="Gols pró">GP</th><th title="Gols contra">GC</th>
+          <th title="Saldo">SG</th><th class="th-pts" title="Pontos">Pts</th>
+        </tr></thead>
+        <tbody>
+          ${thirds.map((t, i) => {
+            const sg = t.GP - t.GC;
+            const rowClass = i < 8 ? 'classified' : 'eliminated';
+            return `<tr class="${rowClass}">
+              <td class="td-pos">${i + 1}</td>
+              <td class="td-team">${t.team}</td>
+              <td style="color:var(--text-3);font-size:.78rem">${t.group}</td>
+              <td>${t.J}</td><td>${t.V}</td><td>${t.E}</td><td>${t.D}</td>
+              <td>${t.GP}</td><td>${t.GC}</td>
+              <td class="${sg > 0 ? 'sg-pos' : sg < 0 ? 'sg-neg' : ''}">${sg > 0 ? '+' : ''}${sg}</td>
+              <td class="td-pts">${t.Pts}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+    <p class="standings-legend" style="max-width:580px;margin-top:10px">
+      <span class="legend-dot classified"></span> Avança para as oitavas &nbsp;·&nbsp;
+      <span class="legend-dot eliminated"></span> Eliminado
+    </p>`;
 }
 
 /* ─── Bracket ────────────────────────────────────────────────────────────── */
