@@ -97,6 +97,7 @@ let matchBetsCache = {};
 let expandedBets   = new Set();
 let statusFilter   = 'all';
 let stageFilter    = 'all';
+let lbStageFilter  = null;
 let viewMode       = localStorage.getItem('bolao_viewmode') || 'grouped';
 let collapsedGroups = new Set(JSON.parse(localStorage.getItem('bolao_collapsed') || '[]'));
 let adminPwd       = null;
@@ -227,7 +228,36 @@ async function openPlayerModal(userId, name, pts, exact, correct) {
     </div>`;
   }).join('');
 
+  // Rivalry (1v1 vs currentUser)
+  let rivalryHtml = '';
+  if (currentUser && currentUser.id !== userId) {
+    const myBetsArr = Object.values(userBets);
+    const myBetMap  = Object.fromEntries(myBetsArr.map(b => [b.match_id, b]));
+    const shared = (bets || []).filter(b => myBetMap[b.match_id] !== undefined);
+    if (shared.length > 0) {
+      let wins = 0, losses = 0, draws = 0, myPts = 0, theirPts = 0;
+      shared.forEach(b => {
+        const myB = myBetMap[b.match_id];
+        myPts    += myB.points || 0;
+        theirPts += b.points   || 0;
+        if      ((myB.points || 0) > (b.points || 0)) wins++;
+        else if ((myB.points || 0) < (b.points || 0)) losses++;
+        else draws++;
+      });
+      rivalryHtml = `
+        <div class="rivalry-bar">
+          <span style="font-weight:700">⚔️ vs você</span>
+          <span style="color:var(--text-3)">${shared.length} jogo${shared.length!==1?'s':''} em comum</span>
+          <span>Você: <strong>${myPts} pts</strong> · ${name}: <strong>${theirPts} pts</strong></span>
+          <span class="rivalry-badge win">${wins}V</span>
+          <span class="rivalry-badge draw">${draws}E</span>
+          <span class="rivalry-badge loss">${losses}D</span>
+        </div>`;
+    }
+  }
+
   document.getElementById('player-modal-body').innerHTML = `
+    ${rivalryHtml}
     <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;gap:20px;flex-wrap:wrap">
       <div style="text-align:center"><div style="font-size:1.8rem;font-weight:900;color:var(--gold)">${pts}</div><div style="font-size:.72rem;color:var(--text-3)">pontos</div></div>
       <div style="text-align:center"><div style="font-size:1.4rem;font-weight:900;color:var(--green)">${exact}</div><div style="font-size:.72rem;color:var(--text-3)">🎯 exatos</div></div>
@@ -276,8 +306,42 @@ async function createUser() {
 
 /* ─── Leaderboard ────────────────────────────────────────────────────────── */
 async function loadLeaderboard() {
-  const data = await api('/api/leaderboard') || [];
+  const url  = '/api/leaderboard' + (lbStageFilter ? '?stage=' + encodeURIComponent(lbStageFilter) : '');
+  const data = await api(url) || [];
   const wrap = document.getElementById('lb-container');
+
+  // Build stage pills from finished matches
+  const pillsWrap = document.getElementById('lb-stage-pills');
+  if (pillsWrap) {
+    const stagesWithFinished = [...new Set(
+      allMatches.filter(m => m.status === 'finished').map(m => m.stage).filter(Boolean)
+    )];
+    const pills = [
+      `<button class="pill${lbStageFilter === null ? ' active' : ''}" onclick="setLbStage(null, this)">Geral</button>`,
+      ...stagesWithFinished.map(s =>
+        `<button class="pill${lbStageFilter === s ? ' active' : ''}" onclick="setLbStage('${s.replace(/'/g,"&#39;")}', this)">${s}</button>`
+      ),
+    ].join('');
+    pillsWrap.innerHTML = `<div class="filter-group">${pills}</div>`;
+  }
+
+  // Show/hide history and special-grid sections based on stage filter
+  const historyDiv   = document.getElementById('history-container');
+  const historyDivider = document.getElementById('history-divider');
+  const specialGrid  = document.getElementById('special-grid');
+  const specialDivider = document.getElementById('special-divider');
+  if (lbStageFilter) {
+    if (historyDiv)    historyDiv.style.display    = 'none';
+    if (historyDivider) historyDivider.style.display = 'none';
+    if (specialGrid)   specialGrid.style.display   = 'none';
+    if (specialDivider) specialDivider.style.display = 'none';
+  } else {
+    if (historyDiv)    historyDiv.style.display    = '';
+    if (historyDivider) historyDivider.style.display = '';
+    if (specialGrid)   specialGrid.style.display   = '';
+    if (specialDivider) specialDivider.style.display = '';
+  }
+
   if (!data.length) {
     wrap.innerHTML = '<div class="empty"><span class="icon">🏆</span>Ninguém no placar ainda.</div>';
     return;
@@ -302,6 +366,11 @@ async function loadLeaderboard() {
           <div class="lb-stat">${p.correct_results}</div>
         </div>`).join('')}
     </div>`;
+}
+
+function setLbStage(stage) {
+  lbStageFilter = stage;
+  loadLeaderboard();
 }
 
 /* ─── Bracket tab ───────────────────────────────────────────────────────── */
@@ -1003,13 +1072,16 @@ function renderMatchCard(m) {
     </div>`;
   }
 
-  // "Ver palpites" toggle (only after match deadline)
-  const showAllBetsToggle = isPast && m.bet_count > 0
-    ? `<button class="all-bets-toggle" onclick="toggleAllBets(${m.id}, this)">
-        ${expandedBets.has(m.id) ? '▲' : '▼'} Ver palpites (${m.bet_count})
+  // "Ver palpites" toggle — visible whenever there are bets
+  const toggleLabel = isPast
+    ? `${expandedBets.has(m.id) ? '▲' : '▼'} Ver palpites (${m.bet_count})`
+    : `👥 ${m.bet_count} apostaram`;
+  const showAllBetsToggle = m.bet_count > 0
+    ? `<button class="all-bets-toggle" onclick="toggleAllBets(${m.id}, this, ${!isPast})">
+        ${toggleLabel}
        </button>
        <div class="all-bets-section" id="all-bets-${m.id}" ${expandedBets.has(m.id)?'':'style="display:none"'}>
-         ${renderAllBets(m.id)}
+         ${renderAllBets(m.id, !isPast)}
        </div>`
     : '';
 
@@ -1036,10 +1108,14 @@ function renderMatchCard(m) {
     </div>`;
 }
 
-function renderAllBets(matchId) {
+function renderAllBets(matchId, hideScores) {
   const bets = matchBetsCache[matchId];
   if (!bets) return '<div class="all-bets-list" style="color:var(--text-3);font-size:.8rem">Carregando...</div>';
   if (!bets.length) return '<div class="all-bets-list" style="color:var(--text-3);font-size:.8rem">Nenhum palpite.</div>';
+  if (hideScores) {
+    const names = bets.map(b => `<span class="feed-chip"><span class="fc-name">${b.user_name}</span></span>`).join('');
+    return `<div class="all-bets-list">${names}</div>`;
+  }
   const chips = bets.map(b => {
     const cls = b.points === 3 ? 'pts-3' : b.points === 1 ? 'pts-1' : b.points === 0 && b.status === 'finished' ? 'pts-0' : '';
     return `<div class="feed-chip ${cls}">
@@ -1051,20 +1127,22 @@ function renderAllBets(matchId) {
   return `<div class="all-bets-list">${chips}</div>`;
 }
 
-async function toggleAllBets(matchId, btn) {
+async function toggleAllBets(matchId, btn, hideScores) {
+  const match = allMatches.find(m => m.id === matchId);
+  const count = match?.bet_count || '';
   if (expandedBets.has(matchId)) {
     expandedBets.delete(matchId);
     document.getElementById(`all-bets-${matchId}`).style.display = 'none';
-    btn.innerHTML = `▼ Ver palpites (${allMatches.find(m=>m.id===matchId)?.bet_count||''})`;
+    btn.innerHTML = hideScores ? `👥 ${count} apostaram` : `▼ Ver palpites (${count})`;
   } else {
     expandedBets.add(matchId);
-    btn.innerHTML = `▲ Ver palpites (${allMatches.find(m=>m.id===matchId)?.bet_count||''})`;
+    btn.innerHTML = hideScores ? `👥 ${count} apostaram` : `▲ Ver palpites (${count})`;
     if (!matchBetsCache[matchId]) {
       const bets = await api(`/api/bets?match_id=${matchId}`);
       matchBetsCache[matchId] = bets || [];
     }
     const section = document.getElementById(`all-bets-${matchId}`);
-    section.innerHTML = renderAllBets(matchId);
+    section.innerHTML = renderAllBets(matchId, hideScores);
     section.style.display = 'block';
   }
 }
@@ -1482,6 +1560,20 @@ async function adminGenerateRound32() {
   if (res.error || !res.ok) { toast(res.error || 'Erro ao gerar', 'error'); return; }
   toast(`${res.added} partidas criadas, ${res.updated} atualizadas!`, 'success');
   allMatches = []; loadMatches(); renderBracketTab();
+}
+
+async function adminBackup() {
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = '⟳ Salvando...';
+  const res = await api('/api/admin/backup', 'POST', { password: adminPwd });
+  btn.disabled = false;
+  btn.textContent = '💾 Backup manual';
+  if (res.error || !res.ok) {
+    toast(res.error || 'Erro ao fazer backup', 'error');
+  } else {
+    toast('Backup enviado para o Gist com sucesso!', 'success');
+  }
 }
 
 async function adminChangePwd() {

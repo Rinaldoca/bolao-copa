@@ -1,6 +1,7 @@
 const express = require('express');
 const path    = require('path');
 const fs      = require('fs');
+const https   = require('https');
 
 // Load .env for local dev (Railway injects vars directly)
 try {
@@ -9,6 +10,8 @@ try {
     if (m && !process.env[m[1]]) process.env[m[1]] = m[2].trim();
   });
 } catch {}
+
+const DATA_DIR = process.env.DATA_DIR || __dirname;
 
 const db      = require('./db');
 const { syncMatches, importGroupStage, importKnockoutStage, generateRound32 } = require('./sync');
@@ -212,9 +215,61 @@ app.post('/api/admin/generate-round32', (req, res) => {
 
 // ── Leaderboard & Feed ────────────────────────────────────────────────────────
 
-app.get('/api/leaderboard', (req, res) => res.json(db.getLeaderboard()));
+app.get('/api/leaderboard', (req, res) => res.json(db.getLeaderboard(req.query.stage || null)));
 app.get('/api/feed',        (req, res) => res.json(db.getFeed()));
 app.get('/api/history',     (req, res) => res.json(db.getPointsHistory()));
+
+// ── Backup to GitHub Gist ─────────────────────────────────────────────────────
+
+async function backupToGist() {
+  const token  = process.env.GIST_TOKEN;
+  const gistId = process.env.GIST_ID;
+  if (!token || !gistId) return;
+  try {
+    const content = fs.readFileSync(path.join(DATA_DIR, 'bolao.json'), 'utf8');
+    const body    = JSON.stringify({ files: { 'bolao.json': { content } } });
+    await new Promise((resolve, reject) => {
+      const req = https.request({
+        hostname: 'api.github.com',
+        path:     `/gists/${gistId}`,
+        method:   'PATCH',
+        headers: {
+          'Authorization': `token ${token}`,
+          'User-Agent':    'bolao-copa',
+          'Content-Type':  'application/json',
+          'Content-Length': Buffer.byteLength(body),
+        },
+      }, res => {
+        let data = '';
+        res.on('data', c => data += c);
+        res.on('end', () => {
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            console.log('[backup] Gist atualizado com sucesso.');
+            resolve();
+          } else {
+            reject(new Error(`HTTP ${res.statusCode}: ${data}`));
+          }
+        });
+      });
+      req.on('error', reject);
+      req.write(body);
+      req.end();
+    });
+  } catch (err) { console.error('[backup]', err.message); }
+}
+
+setInterval(backupToGist, 60 * 60 * 1000);
+setTimeout(backupToGist, 30 * 1000); // first run 30s after start
+
+app.post('/api/admin/backup', async (req, res) => {
+  if (!auth(req.body.password)) return res.status(403).json({ error: 'Senha incorreta' });
+  try {
+    await backupToGist();
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 

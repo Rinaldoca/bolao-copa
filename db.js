@@ -385,21 +385,24 @@ function getPointsHistory() {
 
 // ── Leaderboard ───────────────────────────────────────────────────────────────
 
-function getLeaderboard() {
+function getLeaderboard(stage) {
   const db = load();
   const champion  = db.settings.champion;
   const topScorer = db.settings.top_scorer;
 
   return db.users.map(u => {
-    const myBets    = db.bets.filter(b => b.user_id === u.id);
+    let myBets = db.bets.filter(b => b.user_id === u.id);
+    if (stage) {
+      myBets = myBets.filter(b => db.matches.find(m => m.id === b.match_id)?.stage === stage);
+    }
     const finished  = myBets.filter(b => db.matches.find(m => m.id === b.match_id)?.status === 'finished');
     const matchPts  = myBets.reduce((s, b) => s + b.points, 0);
 
-    const champBet  = db.champion_bets.find(b => b.user_id === u.id);
-    const champPts  = champion && champBet && champBet.team.toLowerCase() === champion.toLowerCase() ? 10 : 0;
+    const champBet  = stage ? null : db.champion_bets.find(b => b.user_id === u.id);
+    const champPts  = !stage && champion && champBet && champBet.team.toLowerCase() === champion.toLowerCase() ? 10 : 0;
 
-    const scorerBet = db.scorer_bets.find(b => b.user_id === u.id);
-    const scorerPts = topScorer && scorerBet && scorerBet.name.toLowerCase() === topScorer.toLowerCase() ? 5 : 0;
+    const scorerBet = stage ? null : db.scorer_bets.find(b => b.user_id === u.id);
+    const scorerPts = !stage && topScorer && scorerBet && scorerBet.name.toLowerCase() === topScorer.toLowerCase() ? 5 : 0;
 
     return {
       id: u.id, name: u.name,

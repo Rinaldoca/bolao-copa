@@ -58,10 +58,11 @@
           <p class="rules-note">⏱ Apostas fecham <strong>5 minutos antes</strong> de cada jogo começar. Palpites de campeão e artilheiro são controlados pelo admin.</p>
         </div>
       </div>
+      <div id="lb-stage-pills" class="filter-row lb-stage-pill-row" style="margin-bottom:12px"></div>
       <div id="lb-container"></div>
-      <div class="section-divider"><span>📈 Evolução no Placar</span></div>
+      <div class="section-divider" id="history-divider"><span>📈 Evolução no Placar</span></div>
       <div id="history-container"></div>
-      <div class="section-divider"><span>🏆 Palpites de Campeão &amp; Artilheiro</span></div>
+      <div class="section-divider" id="special-divider"><span>🏆 Palpites de Campeão &amp; Artilheiro</span></div>
       <div class="special-grid" id="special-grid"></div>
       <div class="section-divider"><span>⚡ Feed de Resultados</span></div>
       <div id="feed-container"></div>
@@ -155,6 +156,7 @@
             <button class="btn btn-ghost" onclick="adminImportMatches()">📥 Importar Fase de Grupos</button>
             <button class="btn btn-ghost" onclick="adminImportKnockout()">🏆 Importar Fase Eliminatória (API)</button>
             <button class="btn btn-ghost" onclick="adminGenerateRound32()">⚡ Gerar 32 avos das classificações</button>
+            <button class="btn btn-ghost" onclick="adminBackup()">💾 Backup manual</button>
           </div>
           <p class="card-sub" style="margin-top:8px">⚠️ <em>Importar Fase de Grupos</em> substitui todas as partidas de grupos e apaga palpites. <em>Importar Fase Eliminatória</em> adiciona/atualiza sem apagar nada. <em>Gerar 32 avos</em> cria os jogos 73-88 com base na classificação atual.</p>
         </div>

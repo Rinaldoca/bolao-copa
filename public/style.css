@@ -846,3 +846,29 @@ select.input { cursor: pointer; }
   /* Bracket: already has overflow-x: auto, just ensure min-width works */
   .bracket-card { min-width: 140px; }
 }
+
+/* ─── Leaderboard stage pills ────────────────────────────────────────────── */
+.lb-stage-pill-row { flex-wrap: wrap; }
+
+/* ─── Rivalry bar (player modal) ─────────────────────────────────────────── */
+.rivalry-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  font-size: .82rem;
+  flex-wrap: wrap;
+}
+
+.rivalry-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: .75rem;
+}
+
+.rivalry-badge.win  { background: var(--gold-glow); color: var(--gold); }
+.rivalry-badge.loss { background: var(--red-dim);   color: var(--red);  }
+.rivalry-badge.draw { background: var(--surface3);  color: var(--text-3); }
