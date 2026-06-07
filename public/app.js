@@ -114,6 +114,19 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function loadAll() {
+  // Verify saved user still exists in DB (handles DB resets after redeploys)
+  if (currentUser) {
+    const users = await api('/api/users') || [];
+    const stillExists = users.find(u => u.id === currentUser.id && u.name === currentUser.name);
+    if (!stillExists) {
+      currentUser = null;
+      localStorage.removeItem('bolao_user');
+      document.getElementById('userBtnIcon').textContent = '👤';
+      document.getElementById('userBtnText').textContent = 'Entrar';
+      document.getElementById('userBtn').classList.remove('logged-in');
+      toast('Sua sessão expirou. Selecione seu perfil novamente.', 'info');
+    }
+  }
   await Promise.all([loadLeaderboard(), loadMatches()]);
   loadSpecialAndFeed();
 }
