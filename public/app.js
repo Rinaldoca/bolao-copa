@@ -527,14 +527,105 @@ function renderBracketCardEmpty() {
     </div>`;
 }
 
+/* ─── Rules card ────────────────────────────────────────────────────────── */
+function toggleRules() {
+  const body  = document.getElementById('rules-body');
+  const arrow = document.getElementById('rules-arrow');
+  const open  = body.classList.toggle('hidden');
+  arrow.textContent = open ? '▾' : '▴';
+}
+
 /* ─── Special bets + Feed ────────────────────────────────────────────────── */
 async function loadSpecialAndFeed() {
-  const [special, feed] = await Promise.all([
+  const [special, feed, history] = await Promise.all([
     api('/api/special-bets'),
     api('/api/feed'),
+    api('/api/history'),
   ]);
   renderSpecialGrid(special, 'special-grid');
   renderFeed(feed);
+  renderHistoryChart(history || []);
+}
+
+function renderHistoryChart(history) {
+  const wrap = document.getElementById('history-container');
+  if (!wrap) return;
+  if (!history.length) {
+    wrap.innerHTML = '<div class="history-chart-wrap"><p class="hc-empty">Nenhum resultado registrado ainda.</p></div>';
+    return;
+  }
+
+  // Collect all users that appear
+  const userIds = [];
+  const userNames = {};
+  (history[0]?.snapshot || []).forEach(u => {
+    userIds.push(u.id);
+    userNames[u.id] = u.name;
+  });
+  if (!userIds.length) {
+    wrap.innerHTML = '<div class="history-chart-wrap"><p class="hc-empty">Nenhum participante ainda.</p></div>';
+    return;
+  }
+
+  // Build series: index → {userId → pts}
+  const series = history.map(h => {
+    const map = {};
+    h.snapshot.forEach(u => { map[u.id] = u.pts; });
+    return map;
+  });
+
+  const maxPts = Math.max(1, ...series.map(s => Math.max(...userIds.map(id => s[id] || 0))));
+  const W = Math.max(400, history.length * 48);
+  const H = 180;
+  const PAD = { top: 12, right: 16, bottom: 32, left: 36 };
+  const innerW = W - PAD.left - PAD.right;
+  const innerH = H - PAD.top - PAD.bottom;
+
+  const xScale = i => PAD.left + (history.length < 2 ? innerW / 2 : (i / (history.length - 1)) * innerW);
+  const yScale = v => PAD.top + innerH - (v / maxPts) * innerH;
+
+  const COLORS = ['#009C3B','#FFD600','#2563eb','#dc2626','#7c3aed','#f97316','#06b6d4','#84cc16'];
+
+  // Grid lines
+  const gridLines = [0, 0.25, 0.5, 0.75, 1].map(t => {
+    const y = PAD.top + innerH * (1 - t);
+    const val = Math.round(maxPts * t);
+    return `<line x1="${PAD.left}" y1="${y}" x2="${PAD.left + innerW}" y2="${y}" stroke="var(--border)" stroke-width="1"/>
+            <text x="${PAD.left - 5}" y="${y + 4}" text-anchor="end" font-size="10" fill="var(--text-3)">${val}</text>`;
+  }).join('');
+
+  // X axis labels (every N steps to avoid crowding)
+  const step = Math.ceil(history.length / 10);
+  const xLabels = history.map((h, i) => {
+    if (i % step !== 0 && i !== history.length - 1) return '';
+    const x = xScale(i);
+    const label = h.label.split(' ')[0]; // first word
+    return `<text x="${x}" y="${H - 4}" text-anchor="middle" font-size="9" fill="var(--text-3)" transform="rotate(-35,${x},${H - 4})">${label}</text>`;
+  }).join('');
+
+  // Lines & dots per user
+  const lines = userIds.map((id, ci) => {
+    const color = COLORS[ci % COLORS.length];
+    const pts = history.map((_, i) => series[i][id] || 0);
+    const d = pts.map((v, i) => `${i === 0 ? 'M' : 'L'}${xScale(i).toFixed(1)},${yScale(v).toFixed(1)}`).join(' ');
+    const lastX = xScale(history.length - 1);
+    const lastY = yScale(pts[pts.length - 1]);
+    const dots = pts.map((v, i) => {
+      if (i !== 0 && i !== pts.length - 1 && pts[i] === pts[i - 1]) return '';
+      return `<circle cx="${xScale(i).toFixed(1)}" cy="${yScale(v).toFixed(1)}" r="3" fill="${color}"/>`;
+    }).join('');
+    return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+            ${dots}
+            <text x="${lastX + 5}" y="${lastY + 4}" font-size="10" fill="${color}" font-weight="700">${userNames[id].split(' ')[0]}</text>`;
+  }).join('');
+
+  wrap.innerHTML = `<div class="history-chart-wrap">
+    <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="min-width:${W}px">
+      ${gridLines}
+      ${xLabels}
+      ${lines}
+    </svg>
+  </div>`;
 }
 
 function renderSpecialGrid(special, containerId) {
@@ -658,6 +749,25 @@ async function loadMatches() {
   }
   buildStagePills();
   renderMatches();
+  updatePendingBadge();
+}
+
+function updatePendingBadge() {
+  const badge = document.getElementById('pending-badge');
+  if (!badge) return;
+  if (!currentUser) { badge.classList.add('hidden'); return; }
+  const now = new Date();
+  const LOCK_MS = 5 * 60 * 1000;
+  const open = allMatches.filter(m =>
+    m.status === 'upcoming' && new Date(m.match_date) - now > LOCK_MS
+  );
+  const unbetted = open.filter(m => !userBets[m.id]).length;
+  if (unbetted > 0) {
+    badge.textContent = unbetted;
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
 }
 
 function buildStagePills() {

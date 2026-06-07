@@ -27,7 +27,7 @@
     <nav class="tab-bar">
       <button class="tab active" data-tab="leaderboard" onclick="showTab('leaderboard')">🏆 Placar</button>
       <button class="tab" data-tab="bracket"     onclick="showTab('bracket')">🗂 Chaveamento</button>
-      <button class="tab" data-tab="matches"     onclick="showTab('matches')">⚽ Partidas</button>
+      <button class="tab" data-tab="matches"     onclick="showTab('matches')">⚽ Partidas<span id="pending-badge" class="pending-badge hidden"></span></button>
       <button class="tab" data-tab="me"          onclick="showTab('me')">👤 Eu</button>
       <button class="tab" data-tab="admin"       onclick="showTab('admin')">⚙️ Admin</button>
     </nav>
@@ -44,7 +44,23 @@
         </div>
         <button class="btn btn-ghost btn-sm" onclick="loadAll()">↻</button>
       </div>
+      <div id="rules-card" class="rules-card">
+        <button class="rules-toggle" onclick="toggleRules()">
+          <span>📋 Como funciona o bolão</span><span id="rules-arrow">▾</span>
+        </button>
+        <div id="rules-body" class="rules-body hidden">
+          <div class="rules-grid">
+            <div class="rules-item"><span class="rules-pts">3 pts</span><div><strong>🎯 Placar exato</strong><p>Acertou o resultado e o número de gols de cada time.</p></div></div>
+            <div class="rules-item"><span class="rules-pts">1 pt</span><div><strong>✅ Resultado certo</strong><p>Acertou quem ganhou ou que deu empate, mas errou o placar.</p></div></div>
+            <div class="rules-item"><span class="rules-pts">10 pts</span><div><strong>🏆 Campeão</strong><p>Acertou o time campeão do Mundial.</p></div></div>
+            <div class="rules-item"><span class="rules-pts">5 pts</span><div><strong>⚽ Artilheiro</strong><p>Acertou o jogador com mais gols no torneio.</p></div></div>
+          </div>
+          <p class="rules-note">⏱ Apostas fecham <strong>5 minutos antes</strong> de cada jogo começar. Palpites de campeão e artilheiro são controlados pelo admin.</p>
+        </div>
+      </div>
       <div id="lb-container"></div>
+      <div class="section-divider"><span>📈 Evolução no Placar</span></div>
+      <div id="history-container"></div>
       <div class="section-divider"><span>🏆 Palpites de Campeão &amp; Artilheiro</span></div>
       <div class="special-grid" id="special-grid"></div>
       <div class="section-divider"><span>⚡ Feed de Resultados</span></div>

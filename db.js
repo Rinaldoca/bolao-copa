@@ -364,6 +364,25 @@ function buildGroupStandingsServer() {
 
 function getFeed() { return load().feed.slice(0, 20); }
 
+function getPointsHistory() {
+  const db = load();
+  const finished = db.matches
+    .filter(m => m.status === 'finished')
+    .slice()
+    .sort((a, b) => a.match_date.localeCompare(b.match_date));
+  const cumulative = {};
+  db.users.forEach(u => { cumulative[u.id] = 0; });
+  return finished.map(m => {
+    db.bets.filter(b => b.match_id === m.id).forEach(b => {
+      if (cumulative[b.user_id] !== undefined) cumulative[b.user_id] += b.points;
+    });
+    return {
+      label: `${m.home_team.split(' ')[0]} × ${m.away_team.split(' ')[0]}`,
+      snapshot: db.users.map(u => ({ id: u.id, name: u.name, pts: cumulative[u.id] || 0 })),
+    };
+  });
+}
+
 // ── Leaderboard ───────────────────────────────────────────────────────────────
 
 function getLeaderboard() {
@@ -450,7 +469,7 @@ module.exports = {
   getSpecialBetsOpen, setSpecialBetsOpen,
   getChampionBets, upsertChampionBet, setChampion,
   getScorerBets, upsertScorerBet, setTopScorer,
-  buildGroupStandingsServer, getFeed,
+  buildGroupStandingsServer, getFeed, getPointsHistory,
   getLeaderboard,
   getSettings, getAdminPassword, setAdminPassword,
   getLastSync, setLastSync,

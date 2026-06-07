@@ -685,6 +685,50 @@ select.input { cursor: pointer; }
 .toast.error   { border-color: var(--red);    color: var(--red); }
 .toast.info    { border-color: var(--gold);   color: var(--gold); }
 
+/* ─── Rules card ─────────────────────────────────────────────────────────── */
+.rules-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  margin-bottom: 16px; overflow: hidden;
+}
+.rules-toggle {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  padding: 13px 18px; background: none; border: none; font-family: inherit;
+  font-size: .88rem; font-weight: 700; color: var(--text); cursor: pointer;
+  transition: background .15s;
+}
+.rules-toggle:hover { background: var(--surface2); }
+.rules-body { padding: 0 18px 16px; }
+.rules-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.rules-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 12px 14px;
+}
+.rules-pts {
+  font-size: 1.1rem; font-weight: 900; color: var(--gold);
+  min-width: 36px; text-align: center; flex-shrink: 0;
+}
+.rules-item strong { font-size: .85rem; display: block; margin-bottom: 3px; }
+.rules-item p { font-size: .78rem; color: var(--text-2); margin: 0; }
+.rules-note { font-size: .78rem; color: var(--text-3); background: var(--surface2); border-radius: var(--radius-sm); padding: 9px 13px; }
+
+/* ─── Pending badge ───────────────────────────────────────────────────────── */
+.pending-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--blue); color: #fff;
+  font-size: .6rem; font-weight: 800; line-height: 1;
+  min-width: 16px; height: 16px; border-radius: 999px;
+  padding: 0 4px; margin-left: 5px; vertical-align: middle;
+}
+
+/* ─── History chart ───────────────────────────────────────────────────────── */
+.history-chart-wrap {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px 18px; overflow-x: auto;
+}
+.history-chart-wrap svg { display: block; }
+.history-chart-wrap .hc-empty { color: var(--text-3); font-size: .85rem; padding: 12px 0; }
+
 /* ─── Countdown ──────────────────────────────────────────────────────────── */
 .match-countdown {
   font-size: .72rem; font-weight: 700; color: var(--gold);
@@ -792,6 +836,9 @@ select.input { cursor: pointer; }
   /* Champion picker: full width */
   .cp-dropdown { left: 0; right: 0; }
   .cp-list { max-height: 180px; }
+
+  /* Rules card */
+  .rules-grid { grid-template-columns: 1fr; }
 
   /* Inner tabs */
   .inner-tab { padding: 8px 12px; font-size: .8rem; }
