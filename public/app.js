@@ -618,7 +618,8 @@ function buildStagePills() {
     <button class="pill ${viewMode === 'grouped'       ? 'active' : ''}" onclick="setViewMode('grouped',this)">📊 Por Grupo</button>
     <button class="pill ${viewMode === 'chronological' ? 'active' : ''}" onclick="setViewMode('chronological',this)">📅 Cronológico</button>
     <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="toggleAllGroups()" title="Expandir/colapsar tudo">⊞</button>
-    ${currentUser ? `<button class="btn btn-ghost btn-sm" onclick="randomizeBets()" title="Preencher palpites aleatórios nos jogos ainda não apostados">🎲 Randomizar</button>` : ''}`;
+    ${currentUser ? `<button class="btn btn-ghost btn-sm" onclick="randomizeBets()" title="Preencher palpites aleatórios nos jogos ainda não apostados">🎲 Randomizar</button>` : ''}
+    ${currentUser ? `<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="confirmClearBets()" title="Apagar todos os seus palpites em jogos ainda não iniciados">🗑 Limpar</button>` : ''}`;
 }
 
 function setViewMode(mode, btn) {
@@ -885,6 +886,21 @@ async function autoSaveBet(matchId) {
   }
   userBets[matchId] = result;
   if (statusEl) { statusEl.textContent = '✓'; statusEl.className = 'auto-bet-status saved'; }
+  loadLeaderboard();
+}
+
+async function confirmClearBets() {
+  if (!currentUser) return;
+  if (!confirm('Apagar todos os seus palpites em jogos que ainda não começaram?\n\nEssa ação não pode ser desfeita.')) return;
+  const result = await api('/api/bets', 'DELETE', { user_id: currentUser.id });
+  if (result.error) { toast(result.error, 'error'); return; }
+  const n = result.deleted;
+  Object.keys(userBets).forEach(id => {
+    const m = allMatches.find(m => m.id === Number(id));
+    if (m && m.status === 'upcoming' && new Date(m.match_date) > new Date()) delete userBets[id];
+  });
+  toast(`${n} palpite${n !== 1 ? 's' : ''} apagado${n !== 1 ? 's' : ''}`, n > 0 ? 'success' : 'info');
+  renderMatches();
   loadLeaderboard();
 }
 

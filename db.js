@@ -209,6 +209,21 @@ function upsertBet({ user_id, match_id, home_score, away_score }) {
   return bet;
 }
 
+function clearUserBets(user_id) {
+  const db = load();
+  const now = new Date();
+  // Only delete bets on matches that haven't started yet
+  const deletable = new Set(
+    db.matches
+      .filter(m => m.status === 'upcoming' && new Date(m.match_date) > now)
+      .map(m => m.id)
+  );
+  const before = db.bets.length;
+  db.bets = db.bets.filter(b => !(b.user_id === user_id && deletable.has(b.match_id)));
+  persist();
+  return before - db.bets.length;
+}
+
 // ── Special bets ──────────────────────────────────────────────────────────────
 
 function getSpecialBetsOpen() { return load().settings.special_bets_open; }
@@ -368,7 +383,7 @@ function seed() {
 module.exports = {
   getUsers, getUserById, createUser,
   getMatches, getMatchById, createMatch, editMatch, setMatchResult, deleteMatch, replaceGroupStage,
-  getBets, upsertBet,
+  getBets, upsertBet, clearUserBets,
   getSpecialBetsOpen, setSpecialBetsOpen,
   getChampionBets, upsertChampionBet, setChampion,
   getScorerBets, upsertScorerBet, setTopScorer,

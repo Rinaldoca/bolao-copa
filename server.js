@@ -91,6 +91,13 @@ app.post('/api/bets', (req, res) => {
   res.json(db.upsertBet({ user_id: Number(user_id), match_id: Number(match_id), home_score: hs, away_score: as_ }));
 });
 
+app.delete('/api/bets', (req, res) => {
+  const user_id = Number(req.body.user_id);
+  if (!user_id) return res.status(400).json({ error: 'user_id obrigatório' });
+  const deleted = db.clearUserBets(user_id);
+  res.json({ success: true, deleted });
+});
+
 // ── Special bets ──────────────────────────────────────────────────────────────
 
 app.get('/api/special-bets', (req, res) => {
