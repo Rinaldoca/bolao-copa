@@ -351,6 +351,10 @@ main { max-width: 860px; margin: 0 auto; padding: 28px 20px 60px; }
 
 .bet-status { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 .saved-tag  { font-size: .75rem; color: var(--green); font-weight: 600; }
+.auto-bet-status { font-size: .85rem; font-weight: 700; margin-left: 8px; min-width: 16px; transition: color .2s; }
+.auto-bet-status.saved  { color: var(--gold); }
+.auto-bet-status.saving { color: var(--text-3); }
+.auto-bet-status.error  { color: var(--red); }
 
 .bet-result-row { display: flex; align-items: center; gap: 8px; font-size: .82rem; flex-wrap: wrap; }
 .bet-prediction { font-weight: 700; color: var(--text); }

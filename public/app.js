@@ -779,21 +779,19 @@ function renderMatchCard(m) {
   } else if (!currentUser) {
     betBar = `<div class="bet-bar"><span class="no-bet-msg"><a href="#" onclick="openUserModal();return false;">Entre</a> para apostar</span></div>`;
   } else {
+    const hasBet = bet !== undefined;
     betBar = `<div class="bet-bar">
       <span class="bet-label">Palpite:</span>
       <div class="bet-inputs">
         <input type="number" class="bet-score-input" id="bh-${m.id}" min="0" max="20"
-          value="${bet !== undefined ? bet.home_score : ''}" placeholder="0">
+          value="${hasBet ? bet.home_score : ''}" placeholder="0"
+          onblur="autoSaveBet(${m.id})" onkeydown="if(event.key==='Enter'){this.blur()}">
         <span class="bet-x">×</span>
         <input type="number" class="bet-score-input" id="ba-${m.id}" min="0" max="20"
-          value="${bet !== undefined ? bet.away_score : ''}" placeholder="0">
+          value="${hasBet ? bet.away_score : ''}" placeholder="0"
+          onblur="autoSaveBet(${m.id})" onkeydown="if(event.key==='Enter'){this.blur()}">
       </div>
-      <div class="bet-status">
-        ${bet !== undefined ? '<span class="saved-tag">✓ Salvo</span>' : ''}
-        <button class="btn btn-primary btn-sm" onclick="saveBet(${m.id})">
-          ${bet !== undefined ? 'Atualizar' : 'Apostar'}
-        </button>
-      </div>
+      <span class="auto-bet-status" id="abs-${m.id}">${hasBet ? '✓' : ''}</span>
     </div>`;
   }
 
@@ -866,6 +864,27 @@ async function saveBet(matchId) {
   userBets[matchId] = result;
   toast('Palpite salvo! ✓', 'success');
   renderMatches();
+  loadLeaderboard();
+}
+
+async function autoSaveBet(matchId) {
+  if (!currentUser) return;
+  const hInput = document.getElementById(`bh-${matchId}`);
+  const aInput = document.getElementById(`ba-${matchId}`);
+  if (!hInput || !aInput) return;
+  const hs  = parseInt(hInput.value);
+  const as_ = parseInt(aInput.value);
+  if (isNaN(hs) || isNaN(as_) || hs < 0 || as_ < 0) return;
+  const statusEl = document.getElementById(`abs-${matchId}`);
+  if (statusEl) { statusEl.textContent = '…'; statusEl.className = 'auto-bet-status saving'; }
+  const result = await api('/api/bets', 'POST', { user_id: currentUser.id, match_id: matchId, home_score: hs, away_score: as_ });
+  if (result.error) {
+    if (statusEl) { statusEl.textContent = '✗'; statusEl.className = 'auto-bet-status error'; }
+    toast(result.error, 'error');
+    return;
+  }
+  userBets[matchId] = result;
+  if (statusEl) { statusEl.textContent = '✓'; statusEl.className = 'auto-bet-status saved'; }
   loadLeaderboard();
 }
 
