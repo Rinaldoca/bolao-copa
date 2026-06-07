@@ -737,13 +737,56 @@ select.input { cursor: pointer; }
 
 /* ─── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .lb-header, .lb-row { grid-template-columns: 40px 1fr 58px; }
-  .lb-header :nth-child(n+4), .lb-row :nth-child(n+4) { display: none; }
-  .match-teams { gap: 8px; }
-  .team-name   { font-size: .88rem; }
-  .form-grid   { grid-template-columns: 1fr; }
+  /* Layout */
+  main { padding: 14px 12px 60px; }
   .pane-header { flex-direction: column; align-items: flex-start; }
-  .special-grid, .admin-special-grid { grid-template-columns: 1fr; }
+
+  /* Header */
+  .logo-title { font-size: 1.05rem; }
+  .logo-ball  { font-size: 1.6rem; }
+  .header-inner { padding: 10px 14px 0; }
+  .tab-bar { padding: 0 10px; }
+  .tab { padding: 10px 10px; font-size: .78rem; }
+
+  /* Leaderboard */
+  .lb-header, .lb-row { grid-template-columns: 36px 1fr 52px; }
+  .lb-header :nth-child(n+4), .lb-row :nth-child(n+4) { display: none; }
+
+  /* Match cards */
+  .match-teams { padding: 12px 12px; gap: 6px; }
+  .t-name { font-size: .82rem; }
+  .t-flag { font-size: 1.2rem; }
+  .vs-box { width: 34px; height: 34px; font-size: 1rem; }
+  .bet-bar { padding: 8px 12px 10px; gap: 8px; }
+  .bet-score-input { width: 46px; height: 38px; font-size: 1rem; }
+  .match-meta { padding: 7px 12px; }
+
+  /* Filter row */
+  .filter-row { gap: 6px; }
+  .pill { padding: 4px 10px; font-size: .74rem; }
+  #view-toggle-row { flex-wrap: wrap; gap: 6px; }
+
+  /* Standings: horizontal scroll on small screens */
+  .standings-group { overflow-x: auto; }
+  .standings-grid  { grid-template-columns: 1fr; }
+
+  /* Forms / admin */
+  .form-grid   { grid-template-columns: 1fr; }
+  .admin-special-grid { grid-template-columns: 1fr; }
+  .admin-result-form { flex-wrap: wrap; }
+
+  /* Special / Me */
+  .special-grid { grid-template-columns: 1fr; }
   .me-stats { grid-template-columns: 1fr 1fr; }
-  main { padding: 16px 14px 50px; }
+  .me-header { flex-wrap: wrap; }
+
+  /* Champion picker: full width */
+  .cp-dropdown { left: 0; right: 0; }
+  .cp-list { max-height: 180px; }
+
+  /* Inner tabs */
+  .inner-tab { padding: 8px 12px; font-size: .8rem; }
+
+  /* Bracket: already has overflow-x: auto, just ensure min-width works */
+  .bracket-card { min-width: 140px; }
 }
