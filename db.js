@@ -4,6 +4,9 @@ const path = require('path');
 const DATA_DIR = process.env.DATA_DIR || __dirname;
 const FILE = path.join(DATA_DIR, 'bolao.json');
 
+// Ensure the data directory exists (needed when a Railway volume is first mounted)
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+
 const DEFAULTS = {
   settings: {
     admin_password:    'bolao2026',

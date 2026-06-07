@@ -1,30 +1,90 @@
 /* ─── Times da Copa 2026 ─────────────────────────────────────────────────── */
 const WC2026_TEAMS = [
-  // Grupo A
-  'México','África do Sul','Coreia do Sul','Tchéquia',
-  // Grupo B
-  'Canadá','Bósnia','Catar','Suíça',
-  // Grupo C
-  'Brasil','Marrocos','Haiti','Escócia',
-  // Grupo D
-  'EUA','Paraguai','Austrália','Turquia',
-  // Grupo E
-  'Alemanha','Curaçao','Costa do Marfim','Equador',
-  // Grupo F
-  'Holanda','Japão','Suécia','Tunísia',
-  // Grupo G
-  'Bélgica','Egito','Irã','Nova Zelândia',
-  // Grupo H
-  'Espanha','Cabo Verde','Arábia Saudita','Uruguai',
-  // Grupo I
-  'França','Senegal','Iraque','Noruega',
-  // Grupo J
-  'Argentina','Argélia','Áustria','Jordânia',
-  // Grupo K
-  'Portugal','Congo RD','Uzbequistão','Colômbia',
-  // Grupo L
-  'Inglaterra','Croácia','Gana','Panamá',
-].sort((a, b) => a.localeCompare(b, 'pt'));
+  {f:'🇲🇽',n:'México'},      {f:'🇿🇦',n:'África do Sul'}, {f:'🇰🇷',n:'Coreia do Sul'},{f:'🇨🇿',n:'Tchéquia'},
+  {f:'🇨🇦',n:'Canadá'},      {f:'🇧🇦',n:'Bósnia'},         {f:'🇶🇦',n:'Catar'},         {f:'🇨🇭',n:'Suíça'},
+  {f:'🇧🇷',n:'Brasil'},      {f:'🇲🇦',n:'Marrocos'},       {f:'🇭🇹',n:'Haiti'},         {f:'🏴󠁧󠁢󠁳󠁣󠁴󠁿',n:'Escócia'},
+  {f:'🇺🇸',n:'EUA'},         {f:'🇵🇾',n:'Paraguai'},       {f:'🇦🇺',n:'Austrália'},     {f:'🇹🇷',n:'Turquia'},
+  {f:'🇩🇪',n:'Alemanha'},    {f:'🇨🇼',n:'Curaçao'},        {f:'🇨🇮',n:'Costa do Marfim'},{f:'🇪🇨',n:'Equador'},
+  {f:'🇳🇱',n:'Holanda'},     {f:'🇯🇵',n:'Japão'},          {f:'🇸🇪',n:'Suécia'},        {f:'🇹🇳',n:'Tunísia'},
+  {f:'🇧🇪',n:'Bélgica'},     {f:'🇪🇬',n:'Egito'},          {f:'🇮🇷',n:'Irã'},           {f:'🇳🇿',n:'Nova Zelândia'},
+  {f:'🇪🇸',n:'Espanha'},     {f:'🇨🇻',n:'Cabo Verde'},     {f:'🇸🇦',n:'Arábia Saudita'},{f:'🇺🇾',n:'Uruguai'},
+  {f:'🇫🇷',n:'França'},      {f:'🇸🇳',n:'Senegal'},        {f:'🇮🇶',n:'Iraque'},        {f:'🇳🇴',n:'Noruega'},
+  {f:'🇦🇷',n:'Argentina'},   {f:'🇩🇿',n:'Argélia'},        {f:'🇦🇹',n:'Áustria'},       {f:'🇯🇴',n:'Jordânia'},
+  {f:'🇵🇹',n:'Portugal'},    {f:'🇨🇩',n:'Congo RD'},       {f:'🇺🇿',n:'Uzbequistão'},   {f:'🇨🇴',n:'Colômbia'},
+  {f:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',n:'Inglaterra'},{f:'🇭🇷',n:'Croácia'},       {f:'🇬🇭',n:'Gana'},          {f:'🇵🇦',n:'Panamá'},
+].sort((a, b) => a.n.localeCompare(b.n, 'pt'));
+
+let _champPickerSelected = null;
+
+function renderChampionPicker(currentValue) {
+  _champPickerSelected = currentValue || null;
+  const team = currentValue ? WC2026_TEAMS.find(t => t.n === currentValue) : null;
+  return `
+    <div class="cp-wrap" id="cp-wrap">
+      <button type="button" class="cp-btn" id="cp-btn" onclick="cpToggle(event)">
+        <span class="cp-value" id="cp-value">
+          ${team ? `<span class="cp-flag">${team.f}</span><span>${team.n}</span>` : `<span class="cp-placeholder">Escolha a seleção...</span>`}
+        </span>
+        <span class="cp-arrow" id="cp-arrow">▾</span>
+      </button>
+      <div class="cp-dropdown hidden" id="cp-dropdown">
+        <div class="cp-search-wrap">
+          <input class="cp-search" id="cp-search" type="text" placeholder="🔍  Buscar seleção..." oninput="cpFilter(this.value)" autocomplete="off">
+        </div>
+        <div class="cp-list" id="cp-list">
+          ${WC2026_TEAMS.map(t => `
+            <div class="cp-item ${currentValue===t.n?'cp-selected':''}" data-name="${t.n}" onclick="cpSelect('${t.n.replace(/'/g,"&#39;")}')">
+              <span class="cp-flag">${t.f}</span>
+              <span class="cp-name">${t.n}</span>
+              ${currentValue===t.n?'<span class="cp-check">✓</span>':''}
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+function cpToggle(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('cp-dropdown');
+  const arrow = document.getElementById('cp-arrow');
+  const isOpen = !dd.classList.contains('hidden');
+  dd.classList.toggle('hidden');
+  arrow.style.transform = isOpen ? '' : 'rotate(180deg)';
+  if (!isOpen) setTimeout(() => document.getElementById('cp-search')?.focus(), 50);
+}
+
+function cpFilter(q) {
+  const lq = q.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+  document.querySelectorAll('.cp-item').forEach(el => {
+    const name = el.dataset.name.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+    el.style.display = name.includes(lq) ? '' : 'none';
+  });
+}
+
+function cpSelect(name) {
+  _champPickerSelected = name;
+  const team = WC2026_TEAMS.find(t => t.n === name);
+  const valueEl = document.getElementById('cp-value');
+  if (valueEl && team) valueEl.innerHTML = `<span class="cp-flag">${team.f}</span><span>${team.n}</span>`;
+  document.querySelectorAll('.cp-item').forEach(el => {
+    const sel = el.dataset.name === name;
+    el.classList.toggle('cp-selected', sel);
+    const existing = el.querySelector('.cp-check');
+    if (existing) existing.remove();
+    if (sel) el.insertAdjacentHTML('beforeend', '<span class="cp-check">✓</span>');
+  });
+  const dd = document.getElementById('cp-dropdown');
+  dd?.classList.add('hidden');
+  document.getElementById('cp-arrow').style.transform = '';
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#cp-wrap')) {
+    document.getElementById('cp-dropdown')?.classList.add('hidden');
+    const arrow = document.getElementById('cp-arrow');
+    if (arrow) arrow.style.transform = '';
+  }
+});
 
 /* ─── State ──────────────────────────────────────────────────────────────── */
 let currentUser    = null;
@@ -854,10 +914,7 @@ async function loadMyPage() {
         : `<div style="color:var(--text-3);font-size:.85rem;margin-bottom:${isOpen?'8':'0'}px">Sem palpite</div>`}
       ${isOpen && !champResult ? `
         <div class="special-input-row">
-          <select class="input" id="my-champ-input">
-            <option value="">Escolha a seleção...</option>
-            ${WC2026_TEAMS.map(t => `<option value="${t}" ${champBet?.team===t?'selected':''}>${t}</option>`).join('')}
-          </select>
+          ${renderChampionPicker(champBet?.team||'')}
           <button class="btn btn-primary btn-sm" onclick="saveMyChamp()">Salvar</button>
         </div>` : ''}
     </div>
@@ -899,8 +956,8 @@ async function loadMyPage() {
 
 async function saveMyChamp() {
   if (!currentUser) return;
-  const team = document.getElementById('my-champ-input')?.value.trim();
-  if (!team) { toast('Informe o time', 'error'); return; }
+  const team = _champPickerSelected;
+  if (!team) { toast('Escolha um time', 'error'); return; }
   const res = await api('/api/champion-bet', 'POST', { user_id: currentUser.id, team });
   if (res.error) { toast(res.error, 'error'); return; }
   toast('Palpite de campeão salvo! 🏆', 'success');
