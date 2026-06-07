@@ -182,6 +182,64 @@ function closeUserModal() {
   document.getElementById('modal-overlay').classList.add('hidden');
 }
 
+function closePlayerModal() {
+  document.getElementById('player-modal').classList.add('hidden');
+  document.getElementById('player-modal-overlay').classList.add('hidden');
+}
+
+async function openPlayerModal(userId, name, pts, exact, correct) {
+  document.getElementById('player-modal-title').textContent = `${name}`;
+  document.getElementById('player-modal-body').innerHTML = '<div class="empty" style="padding:24px 0"><span class="icon">⏳</span>Carregando...</div>';
+  document.getElementById('player-modal').classList.remove('hidden');
+  document.getElementById('player-modal-overlay').classList.remove('hidden');
+
+  const [bets, special] = await Promise.all([
+    api(`/api/bets?user_id=${userId}`),
+    api('/api/special-bets'),
+  ]);
+
+  const champBet  = (special?.champion_bets  || []).find(b => b.user_id === userId);
+  const scorerBet = (special?.scorer_bets    || []).find(b => b.user_id === userId);
+  const champResult  = special?.champion;
+  const scorerResult = special?.top_scorer;
+  const champWon  = champResult  && champBet  && champBet.team.toLowerCase()  === champResult.toLowerCase();
+  const scorerWon = scorerResult && scorerBet && scorerBet.name.toLowerCase() === scorerResult.toLowerCase();
+
+  const matchMap = Object.fromEntries(allMatches.map(m => [m.id, m]));
+  const sortedBets = (bets || []).slice().sort((a, b) => {
+    const ma = matchMap[a.match_id], mb = matchMap[b.match_id];
+    return new Date(ma?.match_date||0) - new Date(mb?.match_date||0);
+  });
+
+  const betRows = sortedBets.map(b => {
+    const m = matchMap[b.match_id];
+    if (!m) return '';
+    const finished = m.status === 'finished';
+    const chipClass = b.points === 3 ? 'pts-3' : b.points === 1 ? 'pts-1' : finished ? 'pts-0' : 'pts-none';
+    const chipLabel = finished ? `${b.points}pt` : '—';
+    const score = finished ? `<span style="color:var(--text-3);font-size:.78rem">${m.home_score}×${m.away_score}</span>` : '';
+    return `<div class="player-bet-row">
+      <div class="player-bet-match">${_flagMap[m.home_team]||''} ${m.home_team} <span style="color:var(--text-3)">×</span> ${m.away_team} ${_flagMap[m.away_team]||''} ${score}</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <span style="font-weight:700">${b.home_score}×${b.away_score}</span>
+        <span class="pts-chip ${chipClass}">${chipLabel}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('player-modal-body').innerHTML = `
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;gap:20px;flex-wrap:wrap">
+      <div style="text-align:center"><div style="font-size:1.8rem;font-weight:900;color:var(--gold)">${pts}</div><div style="font-size:.72rem;color:var(--text-3)">pontos</div></div>
+      <div style="text-align:center"><div style="font-size:1.4rem;font-weight:900;color:var(--green)">${exact}</div><div style="font-size:.72rem;color:var(--text-3)">🎯 exatos</div></div>
+      <div style="text-align:center"><div style="font-size:1.4rem;font-weight:900;color:var(--blue)">${correct}</div><div style="font-size:.72rem;color:var(--text-3)">✅ certos</div></div>
+      ${champBet ? `<div style="flex:1;min-width:120px"><div style="font-size:.7rem;color:var(--text-3);margin-bottom:2px">🏆 Campeão</div><div style="font-weight:700${champWon?' ;color:var(--gold)':''}">${champBet.team}${champWon?' ✓':''}</div></div>` : ''}
+      ${scorerBet ? `<div style="flex:1;min-width:120px"><div style="font-size:.7rem;color:var(--text-3);margin-bottom:2px">⚽ Artilheiro</div><div style="font-weight:700${scorerWon?';color:var(--gold)':''}">${scorerBet.name}${scorerWon?' ✓':''}</div></div>` : ''}
+    </div>
+    <div style="padding:8px 20px 16px">
+      ${betRows || '<div class="empty" style="padding:20px 0"><span class="icon">🎲</span>Sem palpites ainda.</div>'}
+    </div>`;
+}
+
 async function renderUsersList() {
   const wrap = document.getElementById('users-list-wrap');
   wrap.innerHTML = '<div style="color:var(--text-3);font-size:.85rem;padding:8px 0">Carregando...</div>';
@@ -233,7 +291,7 @@ async function loadLeaderboard() {
         <div style="text-align:center">🎯</div><div style="text-align:center">✅</div>
       </div>
       ${data.map((p, i) => `
-        <div class="lb-row ${currentUser?.id === p.id ? 'is-me' : ''}">
+        <div class="lb-row ${currentUser?.id === p.id ? 'is-me' : ''}" onclick="openPlayerModal(${p.id},'${p.name.replace(/'/g,"&#39;")}',${p.total_points},${p.exact_scores},${p.correct_results})" style="cursor:pointer">
           <div class="lb-rank ${rankClass[i]||''}">${rankEmoji[i]||(i+1)}</div>
           <div>
             <div class="lb-name">${p.name}</div>

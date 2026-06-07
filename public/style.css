@@ -655,6 +655,15 @@ select.input { cursor: pointer; }
 .user-avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, var(--gold), var(--gold-d)); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: .85rem; color: #000; flex-shrink: 0; }
 .user-check { margin-left: auto; }
 
+.player-bet-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 9px 0; border-bottom: 1px solid var(--border); font-size: .85rem;
+}
+.player-bet-row:last-child { border-bottom: none; }
+.player-bet-match { flex: 1; min-width: 0; color: var(--text-2); }
+
+.lb-row:hover { background: var(--surface2); }
+
 .modal-sep { text-align: center; font-size: .75rem; color: var(--text-3); margin: 12px 0; position: relative; }
 .modal-sep::before, .modal-sep::after { content: ''; position: absolute; top: 50%; width: 38%; height: 1px; background: var(--border); }
 .modal-sep::before { left: 0; } .modal-sep::after { right: 0; }

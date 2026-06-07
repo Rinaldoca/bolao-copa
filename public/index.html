@@ -221,6 +221,16 @@
     </div>
   </div>
 
+  <!-- ──────────── PLAYER MODAL ──────────── -->
+  <div id="player-modal-overlay" class="modal-overlay hidden" onclick="closePlayerModal()"></div>
+  <div id="player-modal" class="modal hidden" style="max-width:520px;max-height:85vh;display:flex;flex-direction:column">
+    <div class="modal-header">
+      <h3 id="player-modal-title">Palpites</h3>
+      <button class="close-btn" onclick="closePlayerModal()">✕</button>
+    </div>
+    <div id="player-modal-body" style="overflow-y:auto;flex:1"></div>
+  </div>
+
   <!-- ──────────── EDIT MATCH MODAL ──────────── -->
   <div id="edit-modal-overlay" class="modal-overlay hidden" onclick="closeEditModal()"></div>
   <div id="edit-modal" class="modal hidden" style="max-width:480px">
