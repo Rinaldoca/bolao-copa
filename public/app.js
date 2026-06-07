@@ -747,7 +747,7 @@ function renderMatchCard(m) {
   const bet      = userBets[m.id];
   const finished = m.status === 'finished';
   const matchDate = new Date(m.match_date);
-  const isPast   = Date.now() > matchDate.getTime();
+  const isPast   = Date.now() > matchDate.getTime() - 5 * 60 * 1000;
 
   const dateStr = matchDate.toLocaleDateString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
 
@@ -915,7 +915,7 @@ async function randomizeBets() {
   const now = Date.now();
   const open = allMatches.filter(m =>
     m.status === 'upcoming' &&
-    now < new Date(m.match_date).getTime() &&
+    now < new Date(m.match_date).getTime() - 5 * 60 * 1000 &&
     !userBets[m.id]
   );
   if (!open.length) { toast('Sem jogos abertos sem palpite', 'info'); return; }

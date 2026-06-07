@@ -213,9 +213,10 @@ function clearUserBets(user_id) {
   const db = load();
   const now = new Date();
   // Only delete bets on matches that haven't started yet
+  const LOCK_MS = 5 * 60 * 1000;
   const deletable = new Set(
     db.matches
-      .filter(m => m.status === 'upcoming' && new Date(m.match_date) > now)
+      .filter(m => m.status === 'upcoming' && new Date(m.match_date) - LOCK_MS > now)
       .map(m => m.id)
   );
   const before = db.bets.length;
