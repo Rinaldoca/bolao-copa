@@ -700,6 +700,7 @@ function renderMatches() {
       return group ? { name: `Grupo ${group}`, sub: stage } : { name: stage, sub: null };
     });
   }
+  startCountdownTimer();
 }
 
 function renderSections(list, keyFn, labelFn) {
@@ -743,11 +744,49 @@ function renderSections(list, keyFn, labelFn) {
   }).join('');
 }
 
+function fmtCountdown(ms) {
+  if (ms <= 0) return null;
+  const s = Math.floor(ms / 1000);
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (d > 0)  return `${d}d ${h}h`;
+  if (h > 0)  return `${h}h ${String(m).padStart(2,'0')}m`;
+  if (m > 0)  return `${m}m ${String(sec).padStart(2,'0')}s`;
+  return `${sec}s`;
+}
+
+let _countdownTimer = null;
+function startCountdownTimer() {
+  if (_countdownTimer) return;
+  _countdownTimer = setInterval(() => {
+    const now = Date.now();
+    document.querySelectorAll('.match-countdown[data-ts]').forEach(el => {
+      const ts = Number(el.dataset.ts);
+      const remaining = ts - now;
+      const label = fmtCountdown(remaining);
+      if (label) {
+        el.textContent = label;
+        // urgent styling when under 30 min
+        el.classList.toggle('countdown-urgent', remaining < 30 * 60 * 1000);
+      } else {
+        // time's up — re-render matches to lock the bet input
+        clearInterval(_countdownTimer);
+        _countdownTimer = null;
+        renderMatches();
+      }
+    });
+  }, 1000);
+}
+
 function renderMatchCard(m) {
   const bet      = userBets[m.id];
   const finished = m.status === 'finished';
   const matchDate = new Date(m.match_date);
   const isPast   = Date.now() > matchDate.getTime() - 5 * 60 * 1000;
+  const msLeft   = matchDate.getTime() - Date.now();
+  const showCountdown = !finished && msLeft > 0 && msLeft < 48 * 60 * 60 * 1000;
 
   const dateStr = matchDate.toLocaleDateString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
 
@@ -811,6 +850,7 @@ function renderMatchCard(m) {
       <div class="match-meta">
         <span>📅 ${dateStr}${m.venue ? ` · 📍 ${m.venue}` : ''}</span>
         ${badge}
+        ${showCountdown ? `<span class="match-countdown ${msLeft < 30*60*1000 ? 'countdown-urgent' : ''}" data-ts="${matchDate.getTime()}">⏱ ${fmtCountdown(msLeft)}</span>` : ''}
       </div>
       <div class="match-teams">
         <div class="team-name home">${flag(m.home_team)}${m.home_team}</div>
