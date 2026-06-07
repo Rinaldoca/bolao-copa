@@ -290,8 +290,15 @@ main { max-width: 860px; margin: 0 auto; padding: 28px 20px 60px; }
   transition: border-color .2s, box-shadow .2s;
 }
 .match-card:hover     { border-color: var(--border2); box-shadow: 0 4px 24px rgba(0,0,0,.4), 0 0 0 1px rgba(0,196,79,.08); }
-.match-card.has-bet   { border-color: rgba(255,214,0,.45); box-shadow: inset 3px 0 0 var(--gold); }
-.match-card.finished  { opacity: .9; }
+.match-card.has-bet    { border-color: rgba(255,214,0,.45); box-shadow: inset 3px 0 0 var(--gold); }
+.match-card.needs-bet  { border-color: rgba(37,99,235,.35); box-shadow: inset 3px 0 0 var(--blue); }
+.match-card.finished   { opacity: .9; }
+
+.badge-needs-bet {
+  background: var(--blue-dim); border: 1px solid rgba(37,99,235,.3);
+  color: var(--blue); font-size: .68rem; font-weight: 800;
+  padding: 2px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: .04em;
+}
 
 /* Top strip: date + badge */
 .match-meta {

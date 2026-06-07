@@ -846,10 +846,11 @@ function renderMatchCard(m) {
     : '';
 
   return `
-    <div class="match-card ${finished?'finished':''} ${bet!==undefined&&!finished?'has-bet':''}">
+    <div class="match-card ${finished?'finished':''} ${bet!==undefined&&!finished?'has-bet':''} ${!finished&&!isPast&&bet===undefined&&currentUser?'needs-bet':''}">
       <div class="match-meta">
         <span>📅 ${dateStr}${m.venue ? ` · 📍 ${m.venue}` : ''}</span>
         ${badge}
+        ${!finished && !isPast && bet === undefined && currentUser ? '<span class="badge badge-needs-bet">Apostar</span>' : ''}
         ${showCountdown ? `<span class="match-countdown ${msLeft < 30*60*1000 ? 'countdown-urgent' : ''}" data-ts="${matchDate.getTime()}">⏱ ${fmtCountdown(msLeft)}</span>` : ''}
       </div>
       <div class="match-teams">
