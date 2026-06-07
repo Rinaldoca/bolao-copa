@@ -2,26 +2,36 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:        #080c17;
-  --surface:   #10162a;
-  --surface2:  #181f38;
-  --surface3:  #1f2844;
-  --border:    #242e4c;
-  --border2:   #2d3a60;
-  --gold:      #f5a623;
-  --gold-d:    #d9891a;
-  --gold-glow: rgba(245,166,35,.18);
-  --green:     #22c55e;
-  --green-dim: rgba(34,197,94,.15);
-  --blue:      #60a5fa;
-  --blue-dim:  rgba(96,165,250,.15);
-  --red:       #f87171;
-  --red-dim:   rgba(248,113,113,.15);
-  --purple:    #a78bfa;
-  --purple-dim:rgba(167,139,250,.15);
-  --text:      #e2e8f8;
-  --text-2:    #94a3c0;
-  --text-3:    #5a6a8a;
+  /* ── Backgrounds: claro ── */
+  --bg:        #f0f4f8;
+  --surface:   #ffffff;
+  --surface2:  #f5f7fa;
+  --surface3:  #eaecf2;
+  --border:    #dde2ec;
+  --border2:   #c8d0e0;
+
+  /* Brazil green — acento principal */
+  --gold:      #009C3B;
+  --gold-d:    #007d2f;
+  --gold-glow: rgba(0,156,59,.12);
+
+  /* Brazil yellow — acento secundário */
+  --green:     #e6a800;
+  --green-dim: rgba(230,168,0,.13);
+
+  /* Info / outros */
+  --blue:      #2563eb;
+  --blue-dim:  rgba(37,99,235,.1);
+  --red:       #dc2626;
+  --red-dim:   rgba(220,38,38,.1);
+  --purple:    #7c3aed;
+  --purple-dim:rgba(124,58,237,.1);
+
+  /* Text */
+  --text:      #111827;
+  --text-2:    #4b5568;
+  --text-3:    #9ca3af;
+
   --radius:    14px;
   --radius-sm: 8px;
 }
@@ -36,13 +46,23 @@ body {
   line-height: 1.5;
 }
 
+/* Faixa tricolor Brasil */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; height: 4px;
+  background: linear-gradient(90deg, #009C3B 33.33%, #FFD600 33.33% 66.66%, #002776 66.66%);
+  z-index: 9999;
+}
+
 /* ─── Header ─────────────────────────────────────────────────────────────── */
 header {
-  position: sticky; top: 0; z-index: 200;
-  background: rgba(8,12,23,.95);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
+  position: sticky; top: 4px; z-index: 200;
+  background: linear-gradient(180deg, #007a2f 0%, #005f24 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(0,0,0,.1);
+  box-shadow: 0 4px 20px rgba(0,0,0,.25);
 }
 
 .header-inner {
@@ -53,18 +73,20 @@ header {
 
 .logo { display: flex; align-items: center; gap: 11px; }
 .logo-ball { font-size: 2rem; line-height: 1; }
-.logo-title { display: block; font-size: 1.3rem; font-weight: 900; color: var(--gold); letter-spacing: -.02em; line-height: 1; }
-.logo-sub   { display: block; font-size: .7rem; font-weight: 500; color: var(--text-3); letter-spacing: .04em; text-transform: uppercase; margin-top: 2px; }
+.logo-title { display: block; font-size: 1.3rem; font-weight: 900; letter-spacing: -.02em; line-height: 1;
+  background: linear-gradient(135deg, #FFD600 0%, #ffe566 80%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.logo-sub   { display: block; font-size: .7rem; font-weight: 500; color: rgba(255,255,255,.7); letter-spacing: .04em; text-transform: uppercase; margin-top: 2px; }
 
 .user-btn {
   display: flex; align-items: center; gap: 7px;
-  background: var(--surface2); border: 1px solid var(--border2); color: var(--text-2);
+  background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.3); color: rgba(255,255,255,.85);
   padding: 7px 14px 7px 10px; border-radius: 999px;
   font-family: inherit; font-size: .82rem; font-weight: 500;
   cursor: pointer; transition: all .2s; white-space: nowrap; max-width: 170px; overflow: hidden; text-overflow: ellipsis;
 }
-.user-btn:hover { border-color: var(--gold); color: var(--gold); }
-.user-btn.logged-in { border-color: var(--gold); color: var(--gold); background: var(--gold-glow); }
+.user-btn:hover { background: rgba(255,255,255,.25); color: #fff; }
+.user-btn.logged-in { background: rgba(255,214,0,.2); border-color: #FFD600; color: #FFD600; }
 
 /* ─── Tab bar ────────────────────────────────────────────────────────────── */
 .tab-bar {
@@ -72,13 +94,13 @@ header {
   display: flex; gap: 2px; overflow-x: auto;
 }
 .tab {
-  background: none; border: none; color: var(--text-3);
+  background: none; border: none; color: rgba(255,255,255,.65);
   padding: 11px 16px; font-family: inherit; font-size: .87rem; font-weight: 500;
   cursor: pointer; border-bottom: 2px solid transparent;
   transition: color .2s, border-color .2s; white-space: nowrap;
 }
-.tab:hover { color: var(--text-2); }
-.tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+.tab:hover { color: rgba(255,255,255,.9); }
+.tab.active { color: #FFD600; border-bottom-color: #FFD600; }
 
 /* ─── Main ───────────────────────────────────────────────────────────────── */
 main { max-width: 860px; margin: 0 auto; padding: 28px 20px 60px; }
@@ -122,6 +144,7 @@ main { max-width: 860px; margin: 0 auto; padding: 28px 20px 60px; }
 .lb-row:last-child { border-bottom: none; }
 .lb-row:hover { background: var(--surface2); }
 .lb-row.is-me { background: var(--gold-glow); }
+.lb-row:first-child { background: linear-gradient(90deg, rgba(255,214,0,.07) 0%, transparent 60%); }
 
 .lb-rank { font-size: 1.05rem; font-weight: 800; color: var(--text-3); }
 .lb-rank.r1 { color: #ffd700; font-size: 1.2rem; }
@@ -217,13 +240,13 @@ main { max-width: 860px; margin: 0 auto; padding: 28px 20px 60px; }
 .group-header {
   display: flex; align-items: center; gap: 12px;
   width: 100%; padding: 11px 16px;
-  background: var(--surface2);
+  background: linear-gradient(90deg, var(--surface2) 0%, var(--surface3) 100%);
   border: none; color: var(--text);
   cursor: pointer; text-align: left; font-family: inherit;
   transition: background .15s;
   user-select: none;
 }
-.group-header:hover { background: var(--surface3); }
+.group-header:hover { background: linear-gradient(90deg, var(--surface3) 0%, var(--surface2) 100%); }
 
 .group-chevron {
   font-size: 1.1rem; color: var(--text-3); flex-shrink: 0;
@@ -266,8 +289,8 @@ main { max-width: 860px; margin: 0 auto; padding: 28px 20px 60px; }
   margin-bottom: 10px;
   transition: border-color .2s, box-shadow .2s;
 }
-.match-card:hover     { border-color: var(--border2); box-shadow: 0 4px 20px rgba(0,0,0,.3); }
-.match-card.has-bet   { border-color: rgba(245,166,35,.5); }
+.match-card:hover     { border-color: var(--border2); box-shadow: 0 4px 24px rgba(0,0,0,.4), 0 0 0 1px rgba(0,196,79,.08); }
+.match-card.has-bet   { border-color: rgba(255,214,0,.45); box-shadow: inset 3px 0 0 var(--gold); }
 .match-card.finished  { opacity: .9; }
 
 /* Top strip: date + badge */

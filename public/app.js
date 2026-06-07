@@ -1,3 +1,31 @@
+/* ─── Times da Copa 2026 ─────────────────────────────────────────────────── */
+const WC2026_TEAMS = [
+  // Grupo A
+  'México','África do Sul','Coreia do Sul','Tchéquia',
+  // Grupo B
+  'Canadá','Bósnia','Catar','Suíça',
+  // Grupo C
+  'Brasil','Marrocos','Haiti','Escócia',
+  // Grupo D
+  'EUA','Paraguai','Austrália','Turquia',
+  // Grupo E
+  'Alemanha','Curaçao','Costa do Marfim','Equador',
+  // Grupo F
+  'Holanda','Japão','Suécia','Tunísia',
+  // Grupo G
+  'Bélgica','Egito','Irã','Nova Zelândia',
+  // Grupo H
+  'Espanha','Cabo Verde','Arábia Saudita','Uruguai',
+  // Grupo I
+  'França','Senegal','Iraque','Noruega',
+  // Grupo J
+  'Argentina','Argélia','Áustria','Jordânia',
+  // Grupo K
+  'Portugal','Congo RD','Uzbequistão','Colômbia',
+  // Grupo L
+  'Inglaterra','Croácia','Gana','Panamá',
+].sort((a, b) => a.localeCompare(b, 'pt'));
+
 /* ─── State ──────────────────────────────────────────────────────────────── */
 let currentUser    = null;
 let allMatches     = [];
@@ -826,7 +854,10 @@ async function loadMyPage() {
         : `<div style="color:var(--text-3);font-size:.85rem;margin-bottom:${isOpen?'8':'0'}px">Sem palpite</div>`}
       ${isOpen && !champResult ? `
         <div class="special-input-row">
-          <input type="text" class="input" id="my-champ-input" placeholder="Time campeão" value="${champBet?.team||''}">
+          <select class="input" id="my-champ-input">
+            <option value="">Escolha a seleção...</option>
+            ${WC2026_TEAMS.map(t => `<option value="${t}" ${champBet?.team===t?'selected':''}>${t}</option>`).join('')}
+          </select>
           <button class="btn btn-primary btn-sm" onclick="saveMyChamp()">Salvar</button>
         </div>` : ''}
     </div>
