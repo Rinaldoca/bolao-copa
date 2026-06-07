@@ -465,6 +465,62 @@ function seed() {
   });
 }
 
+function getGroupAwards() {
+  const db = load();
+  const matchMap = Object.fromEntries(db.matches.map(m => [m.id, m]));
+
+  const stats = db.users.map(u => {
+    const myBets = db.bets.filter(b => b.user_id === u.id);
+    const finished = myBets
+      .filter(b => matchMap[b.match_id]?.status === 'finished')
+      .sort((a, b) => (matchMap[a.match_id]?.match_date || '').localeCompare(matchMap[b.match_id]?.match_date || ''));
+
+    if (!finished.length) return null;
+
+    // Current streak (from most recent backwards)
+    let currentStreak = 0;
+    for (let i = finished.length - 1; i >= 0; i--) {
+      if (finished[i].points > 0) currentStreak++;
+      else break;
+    }
+    // Best streak ever
+    let bestStreak = 0, temp = 0;
+    for (const b of finished) {
+      if (b.points > 0) { temp++; bestStreak = Math.max(bestStreak, temp); }
+      else temp = 0;
+    }
+
+    const exactScores = finished.filter(b => b.points === 3).length;
+    const correct     = finished.filter(b => b.points > 0).length;
+    const accuracy    = finished.length >= 5 ? correct / finished.length : -1;
+
+    // Zebra: correctly predicted an away win (both predicted AND actual away_score > home_score)
+    const upsets = finished.filter(b => {
+      const m = matchMap[b.match_id];
+      return m && m.away_score > m.home_score && b.away_score > b.home_score && b.points > 0;
+    }).length;
+
+    return { id: u.id, name: u.name, exactScores, currentStreak, bestStreak, accuracy, finishedCount: finished.length, upsets };
+  }).filter(Boolean);
+
+  if (!stats.length) return null;
+
+  const top = (arr, key, min = 1) => {
+    const s = [...arr].sort((a, b) => b[key] - a[key]);
+    return s[0]?.[key] >= min ? s[0] : null;
+  };
+
+  return {
+    rei_exato:        top(stats, 'exactScores'),
+    maior_streak:     top(stats.map(s => ({ ...s, _streak: s.currentStreak || s.bestStreak })), '_streak'),
+    mais_consistente: (() => {
+      const eligible = stats.filter(s => s.accuracy >= 0).sort((a, b) => b.accuracy - a.accuracy);
+      return eligible[0]?.accuracy > 0 ? eligible[0] : null;
+    })(),
+    maior_zebra:      top(stats, 'upsets'),
+  };
+}
+
 module.exports = {
   getUsers, getUserById, createUser,
   getMatches, getMatchById, createMatch, editMatch, setMatchResult, deleteMatch, replaceGroupStage,
@@ -473,7 +529,7 @@ module.exports = {
   getChampionBets, upsertChampionBet, setChampion,
   getScorerBets, upsertScorerBet, setTopScorer,
   buildGroupStandingsServer, getFeed, getPointsHistory,
-  getLeaderboard,
+  getLeaderboard, getGroupAwards,
   getSettings, getAdminPassword, setAdminPassword,
   getLastSync, setLastSync,
   needsSeed, seed,

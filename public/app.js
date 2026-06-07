@@ -614,6 +614,7 @@ async function loadSpecialAndFeed() {
   renderSpecialGrid(special, 'special-grid');
   renderFeed(feed);
   renderHistoryChart(history || []);
+  loadGroupAwards();
 }
 
 function renderHistoryChart(history) {
@@ -1229,6 +1230,173 @@ async function randomizeBets() {
   loadLeaderboard();
 }
 
+/* ─── Detailed stats (Eu tab) ───────────────────────────────────────────── */
+function computeDetailedStats(bets, matchMap) {
+  const finished = bets
+    .filter(b => matchMap[b.match_id]?.status === 'finished')
+    .sort((a, b) => (matchMap[a.match_id]?.match_date || '').localeCompare(matchMap[b.match_id]?.match_date || ''));
+
+  let currentStreak = 0, bestStreak = 0, temp = 0;
+  for (const b of finished) {
+    if (b.points > 0) { temp++; bestStreak = Math.max(bestStreak, temp); }
+    else temp = 0;
+  }
+  for (let i = finished.length - 1; i >= 0; i--) {
+    if (finished[i].points > 0) currentStreak++;
+    else break;
+  }
+
+  const byStage = {};
+  finished.forEach(b => {
+    const m = matchMap[b.match_id];
+    if (!m) return;
+    if (!byStage[m.stage]) byStage[m.stage] = { pts: 0, count: 0, correct: 0, exact: 0 };
+    byStage[m.stage].pts += b.points;
+    byStage[m.stage].count++;
+    if (b.points >= 1) byStage[m.stage].correct++;
+    if (b.points === 3) byStage[m.stage].exact++;
+  });
+
+  let homeWins = 0, draws = 0, awayWins = 0;
+  bets.forEach(b => {
+    if (b.home_score > b.away_score) homeWins++;
+    else if (b.home_score === b.away_score) draws++;
+    else awayWins++;
+  });
+
+  const predGoals = finished.length > 0
+    ? finished.reduce((s, b) => s + b.home_score + b.away_score, 0) / finished.length : 0;
+  const realGoals = finished.length > 0
+    ? finished.reduce((s, b) => { const m = matchMap[b.match_id]; return s + (m?.home_score||0) + (m?.away_score||0); }, 0) / finished.length : 0;
+  const avgPts = finished.length > 0
+    ? finished.reduce((s, b) => s + b.points, 0) / finished.length : 0;
+
+  return { currentStreak, bestStreak, byStage, homeWins, draws, awayWins, predGoals, realGoals, avgPts, finishedCount: finished.length };
+}
+
+function renderDetailedStats(stats, el) {
+  if (!el || !stats.finishedCount) { if (el) el.innerHTML = ''; return; }
+  const { currentStreak, bestStreak, byStage, homeWins, draws, awayWins, predGoals, realGoals, avgPts, finishedCount } = stats;
+  const total = homeWins + draws + awayWins;
+  const pct = n => total > 0 ? Math.round(n / total * 100) : 0;
+
+  const stageEntries = Object.entries(byStage);
+  const maxPts = Math.max(1, ...stageEntries.map(([, v]) => v.pts));
+  const stageBars = stageEntries.map(([stage, v]) => {
+    const fillPct = Math.round(v.pts / maxPts * 100);
+    const acc = v.count > 0 ? Math.round(v.correct / v.count * 100) : 0;
+    const label = stage.replace('Fase de ','').replace(' de Final','').replace('Semifinal','Semi').replace('Terceiro Lugar','3º Lugar');
+    return `<div class="stage-bar-item">
+      <div class="stage-bar-label" title="${stage}">${label}</div>
+      <div class="stage-bar-track"><div class="stage-bar-fill" style="width:${fillPct}%"></div></div>
+      <div class="stage-bar-value">${v.pts}pt<span class="stage-bar-acc">${acc}%</span></div>
+    </div>`;
+  }).join('');
+
+  const MAX_H = 72;
+  const styleBar = (n, cls) => {
+    const h = total > 0 ? Math.max(4, Math.round(n / total * MAX_H)) : 4;
+    return `<div class="bet-style-bar ${cls}" style="height:${h}px"></div>`;
+  };
+
+  const goalDiff = predGoals - realGoals;
+  const goalDiffLabel = goalDiff > 0.1 ? `+${goalDiff.toFixed(1)} acima` : goalDiff < -0.1 ? `${goalDiff.toFixed(1)} abaixo` : 'na média';
+
+  el.innerHTML = `
+    <div class="section-divider"><span>📊 Estatísticas Detalhadas</span></div>
+    <div class="dstats-grid">
+      <div class="dstat-card">
+        <div class="dstat-title">🔥 Sequência atual</div>
+        <div class="dstat-val${currentStreak >= 3 ? ' hot' : ''}">${currentStreak}</div>
+        <div class="dstat-sub">melhor: ${bestStreak}</div>
+      </div>
+      <div class="dstat-card">
+        <div class="dstat-title">📈 Média de pontos</div>
+        <div class="dstat-val">${avgPts.toFixed(2)}</div>
+        <div class="dstat-sub">por jogo encerrado</div>
+      </div>
+      <div class="dstat-card">
+        <div class="dstat-title">⚽ Gols previstos</div>
+        <div class="dstat-val">${predGoals.toFixed(1)}</div>
+        <div class="dstat-sub">real: ${realGoals.toFixed(1)} · ${goalDiffLabel}</div>
+      </div>
+      <div class="dstat-card">
+        <div class="dstat-title">🎯 Jogos analisados</div>
+        <div class="dstat-val">${finishedCount}</div>
+        <div class="dstat-sub">com resultado</div>
+      </div>
+    </div>
+    ${stageEntries.length ? `<div class="dstat-section-card"><div class="dstat-section-title">Pontos por fase</div><div class="stage-bars">${stageBars}</div></div>` : ''}
+    ${total > 0 ? `
+    <div class="dstat-section-card">
+      <div class="dstat-section-title">Estilo de apostas</div>
+      <div class="bet-style-row">
+        <div class="bet-style-item">
+          <div class="bet-style-pct">${pct(homeWins)}%</div>
+          <div class="bet-style-bar-wrap">${styleBar(homeWins, 'home')}</div>
+          <div class="bet-style-label">Casa</div>
+          <div class="bet-style-n">${homeWins}</div>
+        </div>
+        <div class="bet-style-item">
+          <div class="bet-style-pct">${pct(draws)}%</div>
+          <div class="bet-style-bar-wrap">${styleBar(draws, 'draw')}</div>
+          <div class="bet-style-label">Empate</div>
+          <div class="bet-style-n">${draws}</div>
+        </div>
+        <div class="bet-style-item">
+          <div class="bet-style-pct">${pct(awayWins)}%</div>
+          <div class="bet-style-bar-wrap">${styleBar(awayWins, 'away')}</div>
+          <div class="bet-style-label">Visitante</div>
+          <div class="bet-style-n">${awayWins}</div>
+        </div>
+      </div>
+    </div>` : ''}`;
+}
+
+/* ─── Group awards ───────────────────────────────────────────────────────── */
+async function loadGroupAwards() {
+  const awards = await api('/api/awards');
+  renderGroupAwards(awards);
+}
+
+function renderGroupAwards(awards) {
+  const el = document.getElementById('awards-container');
+  const divider = document.getElementById('awards-divider');
+  if (!el) return;
+  if (!awards) {
+    el.innerHTML = '';
+    if (divider) divider.classList.add('hidden');
+    return;
+  }
+  if (divider) divider.classList.remove('hidden');
+
+  const card = (emoji, title, award, valueFn, subFn) => {
+    if (!award) return `<div class="award-card award-empty"><div class="award-emoji">${emoji}</div><div class="award-title">${title}</div><div class="award-empty-msg">Sem dados ainda</div></div>`;
+    return `<div class="award-card" onclick="openPlayerModal(${award.id},'${award.name.replace(/'/g,"&#39;")}',0,0,0)" style="cursor:pointer">
+      <div class="award-emoji">${emoji}</div>
+      <div class="award-title">${title}</div>
+      <div class="award-winner">${award.name}</div>
+      <div class="award-value">${valueFn(award)}</div>
+      ${subFn ? `<div class="award-sub">${subFn(award)}</div>` : ''}
+    </div>`;
+  };
+
+  el.innerHTML = `<div class="awards-grid">
+    ${card('🎯','Rei do Placar Exato', awards.rei_exato,
+      a => `${a.exactScores} exato${a.exactScores!==1?'s':''}`,
+      a => `em ${a.finishedCount} jogos`)}
+    ${card('🔥','Maior Sequência', awards.maior_streak,
+      a => `${a.currentStreak || a.bestStreak} seguidos`,
+      a => a.currentStreak > 0 ? 'sequência ativa' : `melhor: ${a.bestStreak}`)}
+    ${card('💪','Mais Consistente', awards.mais_consistente,
+      a => `${Math.round(a.accuracy*100)}% de acerto`,
+      a => `mín. 5 jogos · ${a.finishedCount} analisados`)}
+    ${card('🤯','Maior Zebra', awards.maior_zebra,
+      a => `${a.upsets} zebra${a.upsets!==1?'s':''}`,
+      () => 'acertou vitórias visitantes')}
+  </div>`;
+}
+
 /* ─── My page ────────────────────────────────────────────────────────────── */
 async function loadMyPage() {
   const noUser  = document.getElementById('me-no-user');
@@ -1307,6 +1475,11 @@ async function loadMyPage() {
           <button class="btn btn-primary btn-sm" onclick="saveMyScorer()">Salvar</button>
         </div>` : ''}
     </div>`;
+
+  // Detailed stats
+  const matchMap = Object.fromEntries(allMatches.map(m => [m.id, m]));
+  const dstats = computeDetailedStats(bets || [], matchMap);
+  renderDetailedStats(dstats, document.getElementById('me-detailed-stats'));
 
   // My bets list
   const sorted = (bets||[]).slice().sort((a, b) => {
