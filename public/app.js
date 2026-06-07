@@ -617,7 +617,8 @@ function buildStagePills() {
   document.getElementById('view-toggle-row').innerHTML = `
     <button class="pill ${viewMode === 'grouped'       ? 'active' : ''}" onclick="setViewMode('grouped',this)">📊 Por Grupo</button>
     <button class="pill ${viewMode === 'chronological' ? 'active' : ''}" onclick="setViewMode('chronological',this)">📅 Cronológico</button>
-    <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="toggleAllGroups()" title="Expandir/colapsar tudo">⊞</button>`;
+    <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="toggleAllGroups()" title="Expandir/colapsar tudo">⊞</button>
+    ${currentUser ? `<button class="btn btn-ghost btn-sm" onclick="randomizeBets()" title="Preencher palpites aleatórios nos jogos ainda não apostados">🎲 Randomizar</button>` : ''}`;
 }
 
 function setViewMode(mode, btn) {
@@ -864,6 +865,39 @@ async function saveBet(matchId) {
   if (result.error) { toast(result.error, 'error'); return; }
   userBets[matchId] = result;
   toast('Palpite salvo! ✓', 'success');
+  renderMatches();
+  loadLeaderboard();
+}
+
+function randScore() {
+  // Weighted distribution: most games are low-scoring
+  const goals = [0,0,0,1,1,1,1,2,2,2,3,3,4];
+  return goals[Math.floor(Math.random() * goals.length)];
+}
+
+async function randomizeBets() {
+  if (!currentUser) { toast('Selecione seu perfil primeiro', 'error'); return; }
+  const now = Date.now();
+  const open = allMatches.filter(m =>
+    m.status === 'upcoming' &&
+    now < new Date(m.match_date).getTime() &&
+    !userBets[m.id]
+  );
+  if (!open.length) { toast('Sem jogos abertos sem palpite', 'info'); return; }
+
+  // Fill inputs for visible matches and save all
+  let saved = 0;
+  for (const m of open) {
+    const hs  = randScore();
+    const as_ = randScore();
+    const hInput = document.getElementById(`bh-${m.id}`);
+    const aInput = document.getElementById(`ba-${m.id}`);
+    if (hInput) hInput.value = hs;
+    if (aInput) aInput.value = as_;
+    const result = await api('/api/bets', 'POST', { user_id: currentUser.id, match_id: m.id, home_score: hs, away_score: as_ });
+    if (!result.error) { userBets[m.id] = result; saved++; }
+  }
+  toast(`${saved} palpite${saved !== 1 ? 's' : ''} aleatório${saved !== 1 ? 's' : ''} salvo${saved !== 1 ? 's' : ''}! 🎲`, 'success');
   renderMatches();
   loadLeaderboard();
 }
