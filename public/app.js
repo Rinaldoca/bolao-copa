@@ -14,6 +14,9 @@ const WC2026_TEAMS = [
   {f:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',n:'Inglaterra'},{f:'🇭🇷',n:'Croácia'},       {f:'🇬🇭',n:'Gana'},          {f:'🇵🇦',n:'Panamá'},
 ].sort((a, b) => a.n.localeCompare(b.n, 'pt'));
 
+const _flagMap = Object.fromEntries(WC2026_TEAMS.map(t => [t.n, t.f]));
+function flag(name) { return _flagMap[name] ? `<span class="team-flag">${_flagMap[name]}</span>` : ''; }
+
 let _champPickerSelected = null;
 
 function renderChampionPicker(currentValue) {
@@ -293,7 +296,7 @@ function standingsRow(t, i, extraCells = '') {
   const sg = t.GP - t.GC;
   return `<tr class="${i < 2 ? 'classified' : i === 2 ? 'possible' : ''}">
     <td class="td-pos">${i + 1}</td>
-    <td class="td-team">${t.team}</td>
+    <td class="td-team">${flag(t.team)}${t.team}</td>
     ${extraCells}
     <td>${t.J}</td><td>${t.V}</td><td>${t.E}</td><td>${t.D}</td>
     <td>${t.GP}</td><td>${t.GC}</td>
@@ -363,7 +366,7 @@ function renderThirdsRanking() {
             const rowClass = i < 8 ? 'classified' : 'eliminated';
             return `<tr class="${rowClass}">
               <td class="td-pos">${i + 1}</td>
-              <td class="td-team">${t.team}</td>
+              <td class="td-team">${flag(t.team)}${t.team}</td>
               <td style="color:var(--text-3);font-size:.78rem">${t.group}</td>
               <td>${t.J}</td><td>${t.V}</td><td>${t.E}</td><td>${t.D}</td>
               <td>${t.GP}</td><td>${t.GC}</td>
@@ -446,11 +449,11 @@ function renderBracketCard(m) {
   return `
     <div class="bracket-card ${finished ? 'finished' : ''}">
       <div class="bracket-team ${homeWon ? 'winner' : finished ? 'loser' : ''}">
-        <span class="bracket-team-name">${m.home_team}</span>
+        ${flag(m.home_team)}<span class="bracket-team-name">${m.home_team}</span>
         ${finished ? `<span class="bracket-team-score">${m.home_score}</span>` : ''}
       </div>
       <div class="bracket-team ${awayWon ? 'winner' : finished ? 'loser' : ''}">
-        <span class="bracket-team-name">${m.away_team}</span>
+        ${flag(m.away_team)}<span class="bracket-team-name">${m.away_team}</span>
         ${finished ? `<span class="bracket-team-score">${m.away_score}</span>` : ''}
       </div>
       <div class="bracket-meta">${dateShort}${m.venue ? ` · ${m.venue}` : ''}</div>
@@ -810,9 +813,9 @@ function renderMatchCard(m) {
         ${badge}
       </div>
       <div class="match-teams">
-        <div class="team-name home">${m.home_team}</div>
+        <div class="team-name home">${flag(m.home_team)}${m.home_team}</div>
         ${vsBlock}
-        <div class="team-name away">${m.away_team}</div>
+        <div class="team-name away">${m.away_team}${flag(m.away_team)}</div>
       </div>
       ${betBar}
       ${showAllBetsToggle}
