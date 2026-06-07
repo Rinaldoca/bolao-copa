@@ -171,6 +171,40 @@ function setMatchResult(id, home_score, away_score) {
   return match;
 }
 
+function upsertKnockoutMatches(matches) {
+  const db = load();
+  let added = 0, updated = 0;
+  for (const m of matches) {
+    const existing = m.api_match_id
+      ? db.matches.find(x => x.api_match_id === m.api_match_id)
+      : null;
+    if (existing) {
+      if (m.home_team && m.home_team !== 'A definir') existing.home_team = m.home_team;
+      if (m.away_team && m.away_team !== 'A definir') existing.away_team = m.away_team;
+      existing.match_date = m.match_date;
+      if (m.venue) existing.venue = m.venue;
+      updated++;
+    } else {
+      db.matches.push({
+        id: ++db._seq.matches,
+        api_match_id: m.api_match_id || null,
+        home_team:    m.home_team,
+        away_team:    m.away_team,
+        match_date:   m.match_date,
+        stage:        m.stage,
+        group_name:   null,
+        venue:        m.venue || null,
+        home_score:   null, away_score: null,
+        status:       'upcoming',
+        created_at:   new Date().toISOString(),
+      });
+      added++;
+    }
+  }
+  persist();
+  return { added, updated };
+}
+
 function deleteMatch(id) {
   const db = load();
   db.matches = db.matches.filter(m => m.id !== id);
@@ -300,6 +334,34 @@ function setTopScorer(name) {
 
 // ── Feed ──────────────────────────────────────────────────────────────────────
 
+function buildGroupStandingsServer() {
+  const db = load();
+  const groups = {};
+  db.matches.filter(m => m.stage === 'Fase de Grupos').forEach(m => {
+    const g = m.group_name || '?';
+    if (!groups[g]) groups[g] = {};
+    [m.home_team, m.away_team].forEach(team => {
+      if (!groups[g][team]) groups[g][team] = { team, J:0, V:0, E:0, D:0, GP:0, GC:0, Pts:0 };
+    });
+    if (m.status === 'finished') {
+      const hs = m.home_score, as_ = m.away_score;
+      const h = groups[g][m.home_team], a = groups[g][m.away_team];
+      h.J++; a.J++; h.GP += hs; h.GC += as_; a.GP += as_; a.GC += hs;
+      if (hs > as_)      { h.V++; h.Pts += 3; a.D++; }
+      else if (hs < as_) { a.V++; a.Pts += 3; h.D++; }
+      else               { h.E++; h.Pts++;    a.E++; a.Pts++; }
+    }
+  });
+  return Object.entries(groups)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([name, teams]) => ({
+      name,
+      sorted: Object.values(teams).sort((a, b) =>
+        (b.Pts - a.Pts) || ((b.GP - b.GC) - (a.GP - a.GC)) || (b.GP - a.GP) || a.team.localeCompare(b.team)
+      ),
+    }));
+}
+
 function getFeed() { return load().feed.slice(0, 20); }
 
 // ── Leaderboard ───────────────────────────────────────────────────────────────
@@ -384,11 +446,11 @@ function seed() {
 module.exports = {
   getUsers, getUserById, createUser,
   getMatches, getMatchById, createMatch, editMatch, setMatchResult, deleteMatch, replaceGroupStage,
-  getBets, upsertBet, clearUserBets,
+  getBets, upsertBet, clearUserBets, upsertKnockoutMatches,
   getSpecialBetsOpen, setSpecialBetsOpen,
   getChampionBets, upsertChampionBet, setChampion,
   getScorerBets, upsertScorerBet, setTopScorer,
-  getFeed,
+  buildGroupStandingsServer, getFeed,
   getLeaderboard,
   getSettings, getAdminPassword, setAdminPassword,
   getLastSync, setLastSync,

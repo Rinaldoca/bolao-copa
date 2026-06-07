@@ -11,7 +11,7 @@ try {
 } catch {}
 
 const db      = require('./db');
-const { syncMatches, importGroupStage } = require('./sync');
+const { syncMatches, importGroupStage, importKnockoutStage, generateRound32 } = require('./sync');
 
 const app = express();
 app.use(express.json());
@@ -183,6 +183,28 @@ app.post('/api/admin/import-matches', async (req, res) => {
   try {
     const result = await importGroupStage();
     res.json(result);
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+app.post('/api/admin/import-knockout', async (req, res) => {
+  if (!auth(req.body.password)) return res.status(403).json({ error: 'Senha incorreta' });
+  try {
+    const result = await importKnockoutStage();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+app.post('/api/admin/generate-round32', (req, res) => {
+  if (!auth(req.body.password)) return res.status(403).json({ error: 'Senha incorreta' });
+  try {
+    const standings = db.buildGroupStandingsServer();
+    const matches   = generateRound32(standings);
+    const result    = db.upsertKnockoutMatches(matches);
+    res.json({ ok: true, ...result });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }

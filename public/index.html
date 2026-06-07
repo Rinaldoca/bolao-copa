@@ -136,9 +136,11 @@
           <div id="sync-status" class="mb-12"></div>
           <div style="display:flex;gap:10px;flex-wrap:wrap">
             <button class="btn btn-secondary" onclick="adminSync()">↻ Sincronizar resultados</button>
-            <button class="btn btn-ghost" onclick="adminImportMatches()">📥 Importar partidas da API</button>
+            <button class="btn btn-ghost" onclick="adminImportMatches()">📥 Importar Fase de Grupos</button>
+            <button class="btn btn-ghost" onclick="adminImportKnockout()">🏆 Importar Fase Eliminatória (API)</button>
+            <button class="btn btn-ghost" onclick="adminGenerateRound32()">⚡ Gerar 32 avos das classificações</button>
           </div>
-          <p class="card-sub" style="margin-top:8px">⚠️ <em>Importar partidas</em> substitui todas as partidas da Fase de Grupos e apaga palpites existentes.</p>
+          <p class="card-sub" style="margin-top:8px">⚠️ <em>Importar Fase de Grupos</em> substitui todas as partidas de grupos e apaga palpites. <em>Importar Fase Eliminatória</em> adiciona/atualiza sem apagar nada. <em>Gerar 32 avos</em> cria os jogos 73-88 com base na classificação atual.</p>
         </div>
 
         <!-- Special bets control -->
@@ -180,6 +182,7 @@
             <input type="text"           id="f-group" class="input" placeholder="Grupo (ex: A)">
             <select                      id="f-stage" class="input">
               <option value="Fase de Grupos">Fase de Grupos</option>
+              <option value="32 avos de Final">32 avos de Final</option>
               <option value="Oitavas de Final">Oitavas de Final</option>
               <option value="Quartas de Final">Quartas de Final</option>
               <option value="Semifinal">Semifinal</option>

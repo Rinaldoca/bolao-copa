@@ -187,4 +187,84 @@ async function importGroupStage() {
   return { ok: true, imported: mapped.length };
 }
 
-module.exports = { syncMatches, importGroupStage };
+// ── Import knockout stage ─────────────────────────────────────────────────────
+
+const KNOCKOUT_STAGE_MAP = {
+  'ROUND_OF_32':    '32 avos de Final',
+  'ROUND_OF_16':    'Oitavas de Final',
+  'QUARTER_FINALS': 'Quartas de Final',
+  'SEMI_FINALS':    'Semifinal',
+  'THIRD_PLACE':    'Terceiro Lugar',
+  'FINAL':          'Final',
+};
+
+async function importKnockoutStage() {
+  const apiKey = process.env.FOOTBALL_API_KEY;
+  if (!apiKey) return { ok: false, error: 'Variável FOOTBALL_API_KEY não configurada' };
+
+  let apiMatches;
+  try {
+    const data = await fetchJson(`${API_BASE}/competitions/WC/matches`, apiKey);
+    apiMatches = (data.matches || []).filter(m => KNOCKOUT_STAGE_MAP[m.stage]);
+  } catch (err) {
+    return { ok: false, error: `Erro na API: ${err.message}` };
+  }
+
+  if (!apiMatches.length) return { ok: false, error: 'Nenhuma partida de fase eliminatória retornada pela API' };
+
+  const mapped = apiMatches.map(m => ({
+    api_match_id: m.id,
+    home_team:    toPortuguese(m.homeTeam?.name || '') || 'A definir',
+    away_team:    toPortuguese(m.awayTeam?.name || '') || 'A definir',
+    match_date:   m.utcDate,
+    stage:        KNOCKOUT_STAGE_MAP[m.stage],
+    group_name:   null,
+    venue:        m.venue || null,
+    home_score:   m.status === 'FINISHED' ? (m.score?.fullTime?.home ?? null) : null,
+    away_score:   m.status === 'FINISHED' ? (m.score?.fullTime?.away ?? null) : null,
+    status:       m.status === 'FINISHED' ? 'finished' : 'upcoming',
+  }));
+
+  const result = db.upsertKnockoutMatches(mapped);
+  console.log(`[import-knockout] added:${result.added} updated:${result.updated} skipped:${result.skipped}`);
+  return { ok: true, ...result };
+}
+
+// ── Generate Round of 32 from group standings ─────────────────────────────────
+// Bracket structure per FIFA 2026 (games 73–88)
+
+function s(groups, grp, pos) {
+  return groups.find(g => g.name === grp)?.sorted[pos]?.team || 'A definir';
+}
+
+function bestThird(groups, allowed) {
+  return groups
+    .filter(g => allowed.includes(g.name) && g.sorted[2])
+    .map(g => g.sorted[2])
+    .sort((a, b) => (b.Pts - a.Pts) || ((b.GP - b.GC) - (a.GP - a.GC)) || (b.GP - a.GP))[0]?.team || 'A definir';
+}
+
+function generateRound32(groupStandings) {
+  const g = groupStandings;
+  return [
+    { date:'2026-06-28T22:00:00Z', home:s(g,'A',1), away:s(g,'B',1),                           venue:'Los Angeles' },
+    { date:'2026-06-29T17:00:00Z', home:s(g,'E',0), away:bestThird(g,['A','B','C','D','F']),   venue:'Boston' },
+    { date:'2026-06-29T20:00:00Z', home:s(g,'F',0), away:s(g,'C',1),                           venue:'Monterrey' },
+    { date:'2026-06-29T23:00:00Z', home:s(g,'C',0), away:s(g,'F',1),                           venue:'Houston' },
+    { date:'2026-06-30T17:00:00Z', home:s(g,'I',0), away:bestThird(g,['C','D','F','G','H']),   venue:'Nova York' },
+    { date:'2026-06-30T20:00:00Z', home:s(g,'E',1), away:s(g,'I',1),                           venue:'Dallas' },
+    { date:'2026-06-30T23:00:00Z', home:s(g,'A',0), away:bestThird(g,['C','E','F','H','I']),   venue:'Cidade do México' },
+    { date:'2026-07-01T17:00:00Z', home:s(g,'L',0), away:bestThird(g,['E','H','I','J','K']),   venue:'Atlanta' },
+    { date:'2026-07-01T20:00:00Z', home:s(g,'D',0), away:bestThird(g,['B','E','F','I','J']),   venue:'San Francisco' },
+    { date:'2026-07-01T23:00:00Z', home:s(g,'G',0), away:bestThird(g,['A','E','H','I','J']),   venue:'Seattle' },
+    { date:'2026-07-02T17:00:00Z', home:s(g,'K',1), away:s(g,'L',1),                           venue:'Toronto' },
+    { date:'2026-07-02T20:00:00Z', home:s(g,'H',0), away:s(g,'J',1),                           venue:'Los Angeles' },
+    { date:'2026-07-02T23:00:00Z', home:s(g,'B',0), away:bestThird(g,['E','F','G','I','J']),   venue:'Vancouver' },
+    { date:'2026-07-03T17:00:00Z', home:s(g,'J',0), away:s(g,'H',1),                           venue:'Miami' },
+    { date:'2026-07-03T20:00:00Z', home:s(g,'K',0), away:bestThird(g,['D','E','I','J','L']),   venue:'Kansas City' },
+    { date:'2026-07-03T23:00:00Z', home:s(g,'D',1), away:s(g,'G',1),                           venue:'Dallas' },
+  ].map(m => ({ api_match_id: null, home_team: m.home, away_team: m.away,
+                match_date: m.date, stage: '32 avos de Final', venue: m.venue }));
+}
+
+module.exports = { syncMatches, importGroupStage, importKnockoutStage, generateRound32 };

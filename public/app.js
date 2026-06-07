@@ -442,8 +442,8 @@ function renderThirdsRanking() {
 }
 
 /* ─── Bracket ────────────────────────────────────────────────────────────── */
-const BRACKET_STAGES = ['Oitavas de Final', 'Quartas de Final', 'Semifinal', 'Final'];
-const BRACKET_COUNTS = { 'Oitavas de Final': 16, 'Quartas de Final': 8, 'Semifinal': 4, 'Final': 1 };
+const BRACKET_STAGES = ['32 avos de Final', 'Oitavas de Final', 'Quartas de Final', 'Semifinal', 'Final'];
+const BRACKET_COUNTS = { '32 avos de Final': 16, 'Oitavas de Final': 8, 'Quartas de Final': 4, 'Semifinal': 2, 'Final': 1 };
 
 function renderBracket() {
   const wrap = document.getElementById('bracket-container');
@@ -1353,6 +1353,25 @@ async function adminImportMatches() {
   loadAdminMatches();
   loadMatches();
   renderBracketTab();
+}
+
+async function adminImportKnockout() {
+  const btn = event.target; btn.disabled = true; btn.textContent = '⟳ Importando...';
+  const res = await api('/api/admin/import-knockout', 'POST', { password: adminPwd });
+  btn.disabled = false; btn.textContent = '🏆 Importar Fase Eliminatória (API)';
+  if (res.error || !res.ok) { toast(res.error || 'Erro ao importar', 'error'); return; }
+  toast(`${res.added} partidas adicionadas, ${res.updated} atualizadas!`, 'success');
+  allMatches = []; loadMatches(); renderBracketTab();
+}
+
+async function adminGenerateRound32() {
+  if (!confirm('Gerar os 32 jogos da fase de 32 avos com base na classificação atual dos grupos?\n\nIsso não apaga palpites existentes.')) return;
+  const btn = event.target; btn.disabled = true; btn.textContent = '⟳ Gerando...';
+  const res = await api('/api/admin/generate-round32', 'POST', { password: adminPwd });
+  btn.disabled = false; btn.textContent = '⚡ Gerar 32 avos das classificações';
+  if (res.error || !res.ok) { toast(res.error || 'Erro ao gerar', 'error'); return; }
+  toast(`${res.added} partidas criadas, ${res.updated} atualizadas!`, 'success');
+  allMatches = []; loadMatches(); renderBracketTab();
 }
 
 async function adminChangePwd() {
