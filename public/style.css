@@ -281,6 +281,7 @@ main { max-width: 860px; margin: 0 auto; padding: 28px 20px 60px; }
 .group-matches .bet-bar     { padding: 8px 14px 10px; }
 
 /* Card shell */
+/* ─── Match card ─────────────────────────────────────────────────────────── */
 .match-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -289,82 +290,82 @@ main { max-width: 860px; margin: 0 auto; padding: 28px 20px 60px; }
   margin-bottom: 10px;
   transition: border-color .2s, box-shadow .2s;
 }
-.match-card:hover     { border-color: var(--border2); box-shadow: 0 4px 24px rgba(0,0,0,.4), 0 0 0 1px rgba(0,196,79,.08); }
-.match-card.has-bet    { border-color: rgba(255,214,0,.45); box-shadow: inset 3px 0 0 var(--gold); }
-.match-card.needs-bet  { border-color: rgba(37,99,235,.35); box-shadow: inset 3px 0 0 var(--blue); }
-.match-card.finished   { opacity: .9; }
+.match-card:hover    { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+.match-card.has-bet  { border-left: 3px solid var(--gold); }
+.match-card.needs-bet{ border-left: 3px solid var(--blue); }
+.match-card.finished { border-left: 3px solid var(--border2); opacity: .88; }
 
-.badge-needs-bet {
-  background: var(--blue-dim); border: 1px solid rgba(37,99,235,.3);
-  color: var(--blue); font-size: .68rem; font-weight: 800;
-  padding: 2px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: .04em;
-}
-
-/* Top strip: date + badge */
+/* Meta strip */
 .match-meta {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 9px 16px; gap: 8px; flex-wrap: wrap;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 14px;
   background: var(--surface2);
   border-bottom: 1px solid var(--border);
-  font-size: .72rem; color: var(--text-3);
+  font-size: .71rem; color: var(--text-3);
 }
+.match-meta > span:first-child { flex: 1; }
 
-.badge { padding: 2px 9px; border-radius: 999px; font-size: .67rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
-.badge-open     { background: var(--gold-glow); color: var(--gold); }
-.badge-closed   { background: var(--blue-dim);  color: var(--blue); }
-.badge-finished { background: var(--green-dim); color: var(--green); }
+.badge { padding: 2px 9px; border-radius: 999px; font-size: .67rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+.badge-open     { background: var(--gold-glow);  color: var(--gold); border: 1px solid rgba(0,156,59,.2); }
+.badge-closed   { background: var(--surface3);   color: var(--text-3); }
+.badge-finished { background: var(--green-dim);  color: var(--green); border: 1px solid rgba(230,168,0,.2); }
 
 /* Teams row */
 .match-teams {
   display: grid;
-  grid-template-columns: 1fr 100px 1fr;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  padding: 18px 20px 16px;
-  gap: 8px;
+  padding: 16px 18px;
+  gap: 10px;
 }
+.team { display: flex; align-items: center; gap: 8px; }
+.team.home { justify-content: flex-end; }
+.team.away { justify-content: flex-start; }
+.t-name { font-weight: 800; font-size: 1rem; line-height: 1.2; }
+.t-flag { font-size: 1.5rem; line-height: 1; flex-shrink: 0; }
 
-.team-name       { font-weight: 800; font-size: 1rem; line-height: 1.2; }
-.team-name.home  { text-align: right; }
-.team-name.away  { text-align: left; }
-
-/* Score / VS centre block */
-.vs-block  { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.vs-scores { display: flex; align-items: center; gap: 8px; }
+/* Score / VS */
+.vs-block  { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0 4px; }
+.vs-scores { display: flex; align-items: center; gap: 6px; }
 .vs-box {
   background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px;
-  width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
   font-size: 1.2rem; font-weight: 900;
 }
 .vs-sep   { color: var(--text-3); font-size: .85rem; font-weight: 700; }
-.vs-label { font-size: .68rem; font-weight: 700; color: var(--text-3); letter-spacing: .08em; text-transform: uppercase; }
+.vs-label { font-size: .65rem; font-weight: 800; color: var(--text-3); letter-spacing: .1em; text-transform: uppercase; }
 
 /* Bet row */
 .bet-bar {
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;
   padding: 10px 16px 12px;
   border-top: 1px solid var(--border);
-  background: rgba(255,255,255,.018);
 }
+.match-card.needs-bet .bet-bar { background: rgba(37,99,235,.04); }
+.match-card.has-bet   .bet-bar { background: rgba(255,214,0,.04); }
+
 .bet-label { font-size: .75rem; color: var(--text-3); font-weight: 600; white-space: nowrap; flex-shrink: 0; }
 
-.bet-inputs { display: flex; align-items: center; gap: 7px; }
+.bet-inputs { display: flex; align-items: center; gap: 8px; }
 .bet-score-input {
-  width: 50px; height: 40px; text-align: center; font-size: 1.1rem; font-weight: 800;
-  background: var(--surface); border: 1px solid var(--border2); border-radius: 7px;
-  color: var(--text); font-family: inherit; transition: border-color .2s;
+  width: 52px; height: 42px; text-align: center; font-size: 1.15rem; font-weight: 800;
+  background: var(--surface); border: 1px solid var(--border2); border-radius: 8px;
+  color: var(--text); font-family: inherit; transition: border-color .2s, box-shadow .2s;
 }
-.bet-score-input:focus { outline: none; border-color: var(--gold); }
+.bet-score-input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-glow); }
+.match-card.needs-bet .bet-score-input { border-color: rgba(37,99,235,.3); }
+.match-card.needs-bet .bet-score-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-dim); }
 .bet-x { color: var(--text-3); font-size: .85rem; font-weight: 700; }
 
 .bet-status { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 .saved-tag  { font-size: .75rem; color: var(--green); font-weight: 600; }
-.auto-bet-status { font-size: .85rem; font-weight: 700; margin-left: 8px; min-width: 16px; transition: color .2s; }
+.auto-bet-status { font-size: .9rem; font-weight: 800; margin-left: 6px; min-width: 16px; transition: color .2s; }
 .auto-bet-status.saved  { color: var(--gold); }
 .auto-bet-status.saving { color: var(--text-3); }
 .auto-bet-status.error  { color: var(--red); }
 
 .bet-result-row { display: flex; align-items: center; gap: 8px; font-size: .82rem; flex-wrap: wrap; }
-.bet-prediction { font-weight: 700; color: var(--text); }
+.bet-prediction { font-weight: 700; }
 
 .pts-chip { padding: 4px 11px; border-radius: 999px; font-weight: 800; font-size: .78rem; }
 .pts-3    { background: var(--green-dim); color: var(--green); }

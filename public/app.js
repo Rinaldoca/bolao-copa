@@ -850,13 +850,18 @@ function renderMatchCard(m) {
       <div class="match-meta">
         <span>📅 ${dateStr}${m.venue ? ` · 📍 ${m.venue}` : ''}</span>
         ${badge}
-        ${!finished && !isPast && bet === undefined && currentUser ? '<span class="badge badge-needs-bet">Apostar</span>' : ''}
         ${showCountdown ? `<span class="match-countdown ${msLeft < 30*60*1000 ? 'countdown-urgent' : ''}" data-ts="${matchDate.getTime()}">⏱ ${fmtCountdown(msLeft)}</span>` : ''}
       </div>
       <div class="match-teams">
-        <div class="team-name home">${flag(m.home_team)}${m.home_team}</div>
+        <div class="team home">
+          <span class="t-name">${m.home_team}</span>
+          <span class="t-flag">${_flagMap[m.home_team]||''}</span>
+        </div>
         ${vsBlock}
-        <div class="team-name away">${m.away_team}${flag(m.away_team)}</div>
+        <div class="team away">
+          <span class="t-flag">${_flagMap[m.away_team]||''}</span>
+          <span class="t-name">${m.away_team}</span>
+        </div>
       </div>
       ${betBar}
       ${showAllBetsToggle}
