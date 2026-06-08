@@ -374,7 +374,12 @@ function setLbStage(stage) {
 }
 
 /* ─── Bracket tab ───────────────────────────────────────────────────────── */
-function renderBracketTab() {
+async function renderBracketTab() {
+  if (currentUser) {
+    const bets = await api(`/api/bets?user_id=${currentUser.id}`) || [];
+    userBets = {};
+    bets.forEach(b => { userBets[b.match_id] = b; });
+  }
   renderGroupStandings();
   renderThirdsRanking();
   renderBracket();
@@ -563,18 +568,37 @@ function renderBracketCard(m) {
   const myBet     = userBets[m.id];
   const matchDate = new Date(m.match_date);
   const dateShort = matchDate.toLocaleDateString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+  const isPast    = Date.now() > matchDate.getTime() - 5 * 60 * 1000;
+  const tbd       = m.home_team === 'A definir' || m.away_team === 'A definir';
 
   let betLine = '';
   if (finished && myBet) {
-    const cls = myBet.points===3 ? 'pts-3' : myBet.points===1 ? 'pts-1' : 'pts-0';
+    const cls   = myBet.points===3 ? 'pts-3' : myBet.points===1 ? 'pts-1' : 'pts-0';
     const emoji = myBet.points===3 ? '🎯' : myBet.points===1 ? '✅' : '❌';
     betLine = `<div class="bracket-bet"><span class="pts-chip ${cls}" style="font-size:.7rem;padding:2px 7px">${myBet.home_score}-${myBet.away_score} · ${myBet.points}pt ${emoji}</span></div>`;
-  } else if (!finished && myBet) {
-    betLine = `<div class="bracket-bet" style="color:var(--gold);font-size:.72rem">✓ ${myBet.home_score}-${myBet.away_score}</div>`;
+  } else if (finished && !myBet) {
+    betLine = '';
+  } else if (isPast && myBet) {
+    betLine = `<div class="bracket-bet" style="color:var(--text-3);font-size:.72rem">⏳ ${myBet.home_score}-${myBet.away_score}</div>`;
+  } else if (isPast) {
+    betLine = `<div class="bracket-bet" style="color:var(--text-3);font-size:.72rem">⏳ apostas encerradas</div>`;
+  } else if (!tbd && currentUser) {
+    betLine = `<div class="bracket-bet bracket-bet-inputs">
+      <input type="number" class="bracket-score-input" id="bh-${m.id}" min="0" max="20"
+        value="${myBet ? myBet.home_score : ''}" placeholder="0"
+        onblur="autoSaveBet(${m.id})" onkeydown="if(event.key==='Enter')this.blur()">
+      <span style="color:var(--text-3);font-size:.8rem;font-weight:700">×</span>
+      <input type="number" class="bracket-score-input" id="ba-${m.id}" min="0" max="20"
+        value="${myBet ? myBet.away_score : ''}" placeholder="0"
+        onblur="autoSaveBet(${m.id})" onkeydown="if(event.key==='Enter')this.blur()">
+      <span class="auto-bet-status" id="abs-${m.id}" style="font-size:.8rem">${myBet ? '✓' : ''}</span>
+    </div>`;
+  } else if (!tbd && !currentUser) {
+    betLine = `<div class="bracket-bet" style="color:var(--text-3);font-size:.72rem"><a href="#" onclick="openUserModal();return false;" style="color:var(--gold)">Entre</a> para apostar</div>`;
   }
 
   return `
-    <div class="bracket-card ${finished ? 'finished' : ''}">
+    <div class="bracket-card ${finished ? 'finished' : ''} ${!finished && !isPast && myBet && !tbd ? 'bracket-has-bet' : ''} ${!finished && !isPast && !myBet && currentUser && !tbd ? 'bracket-needs-bet' : ''}">
       <div class="bracket-team ${homeWon ? 'winner' : finished ? 'loser' : ''}">
         ${flag(m.home_team)}<span class="bracket-team-name">${m.home_team}</span>
         ${finished ? `<span class="bracket-team-score">${m.home_score}</span>` : ''}

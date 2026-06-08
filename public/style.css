@@ -485,6 +485,17 @@ main { max-width: 860px; margin: 0 auto; padding: 28px 20px 60px; }
   background: var(--surface2);
   border-top: 1px solid var(--border);
 }
+.bracket-bet-inputs {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.bracket-score-input {
+  width: 38px; height: 32px; text-align: center; font-size: .95rem; font-weight: 800;
+  background: var(--surface); border: 1px solid var(--border2); border-radius: 6px;
+  color: var(--text); font-family: inherit; transition: border-color .2s;
+}
+.bracket-score-input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold-glow); }
+.bracket-has-bet  { border-left: 3px solid var(--gold); }
+.bracket-needs-bet { border-left: 3px solid var(--blue); }
 
 .bracket-third {
   margin-top: 28px;
