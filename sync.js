@@ -97,60 +97,79 @@ function fetchJson(url, token) {
   });
 }
 
+function fetchEspn(url) {
+  return new Promise((resolve, reject) => {
+    https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } }, res => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => {
+        if (res.statusCode !== 200) { reject(new Error(`ESPN HTTP ${res.statusCode}`)); return; }
+        try { resolve(JSON.parse(data)); } catch (e) { reject(e); }
+      });
+    }).on('error', reject);
+  });
+}
+
 function isoDay(str) { return str ? str.slice(0, 10) : null; }
+
+const ESPN_SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard';
+const ESPN_FINISHED   = new Set(['STATUS_FULL_TIME','STATUS_FINAL_AET','STATUS_FINAL_PEN','STATUS_FULL_PEN','STATUS_ENDED']);
 
 // ── Sync results ──────────────────────────────────────────────────────────────
 
 async function syncMatches() {
-  const apiKey = process.env.FOOTBALL_API_KEY;
-  if (!apiKey) {
-    return { ok: false, error: 'Variável FOOTBALL_API_KEY não configurada' };
-  }
+  const now     = new Date();
+  const pending = db.getMatches().filter(m => m.status === 'upcoming' && new Date(m.match_date) < now);
 
-  let apiMatches;
-  try {
-    const data = await fetchJson(`${API_BASE}/competitions/WC/matches`, apiKey);
-    apiMatches = data.matches || [];
-  } catch (err) {
-    const result = { ok: false, error: `Erro na API: ${err.message}`, time: new Date().toISOString() };
+  if (!pending.length) {
+    const result = { ok: true, updated: 0, skipped: 0, not_found: 0, pending: 0, time: now.toISOString() };
     db.setLastSync(result);
     return result;
   }
 
-  // Build lookups: by api_match_id and by "day|home|away"
-  const idLookup  = {};
-  const dayLookup = {};
-  for (const m of apiMatches) {
-    idLookup[m.id] = m;
-    const home = normalize(m.homeTeam?.name || '');
-    const away = normalize(m.awayTeam?.name || '');
-    const day  = isoDay(m.utcDate);
-    if (home && away && day) dayLookup[`${day}|${home}|${away}`] = m;
-  }
+  // Unique dates to fetch from ESPN
+  const dates = [...new Set(pending.map(m => isoDay(m.match_date)))];
 
-  const now     = new Date();
-  const pending = db.getMatches().filter(m => m.status === 'upcoming' && new Date(m.match_date) < now);
+  const espnLookup = {};
+  for (const date of dates) {
+    try {
+      const data = await fetchEspn(`${ESPN_SCOREBOARD}?dates=${date.replace(/-/g, '')}`);
+      for (const event of data.events || []) {
+        const comp = event.competitions?.[0];
+        if (!comp) continue;
+        const home = comp.competitors?.find(c => c.homeAway === 'home');
+        const away = comp.competitors?.find(c => c.homeAway === 'away');
+        if (!home || !away) continue;
+        const key = `${isoDay(event.date)}|${normalize(home.team.displayName)}|${normalize(away.team.displayName)}`;
+        espnLookup[key] = {
+          statusName: comp.status?.type?.name,
+          completed:  comp.status?.type?.completed,
+          homeScore:  parseInt(home.score),
+          awayScore:  parseInt(away.score),
+        };
+      }
+    } catch (err) {
+      const result = { ok: false, error: `Erro ESPN (${date}): ${err.message}`, time: now.toISOString() };
+      db.setLastSync(result);
+      return result;
+    }
+  }
 
   let updated = 0, skipped = 0, notFound = 0;
 
   for (const local of pending) {
-    // Prefer api_match_id lookup, fall back to date+team
-    const hit = local.api_match_id
-      ? idLookup[local.api_match_id]
-      : dayLookup[`${isoDay(local.match_date)}|${normalize(local.home_team)}|${normalize(local.away_team)}`];
+    const key = `${isoDay(local.match_date)}|${normalize(local.home_team)}|${normalize(local.away_team)}`;
+    const hit = espnLookup[key];
 
-    if (!hit)                  { notFound++; continue; }
-    if (hit.status !== 'FINISHED') { skipped++;  continue; }
+    if (!hit) { notFound++; continue; }
+    if (!ESPN_FINISHED.has(hit.statusName) && !hit.completed) { skipped++; continue; }
+    if (isNaN(hit.homeScore) || isNaN(hit.awayScore)) { skipped++; continue; }
 
-    const hs  = hit.score?.fullTime?.home;
-    const as_ = hit.score?.fullTime?.away;
-    if (hs == null || as_ == null) { skipped++; continue; }
-
-    db.setMatchResult(local.id, hs, as_);
+    db.setMatchResult(local.id, hit.homeScore, hit.awayScore);
     updated++;
   }
 
-  const result = { ok: true, updated, skipped, not_found: notFound, pending: pending.length, time: new Date().toISOString() };
+  const result = { ok: true, updated, skipped, not_found: notFound, pending: pending.length, time: now.toISOString() };
   db.setLastSync(result);
   console.log(`[sync] ${result.time} — updated:${updated} skipped:${skipped} not_found:${notFound}`);
   return result;
