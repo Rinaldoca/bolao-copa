@@ -1847,12 +1847,16 @@ async function adminBackup() {
   btn.textContent = '⟳ Salvando...';
   const res = await api('/api/admin/backup', 'POST', { password: adminPwd });
   btn.disabled = false;
-  btn.textContent = '💾 Backup manual';
+  btn.textContent = '💾 Backup (Gist)';
   if (res.error || !res.ok) {
     toast(res.error || 'Erro ao fazer backup', 'error');
   } else {
     toast('Backup enviado para o Gist com sucesso!', 'success');
   }
+}
+
+function adminDownload() {
+  window.location.href = `/api/admin/download?password=${encodeURIComponent(adminPwd)}`;
 }
 
 async function adminChangePwd() {

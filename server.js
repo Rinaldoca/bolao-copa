@@ -287,6 +287,14 @@ app.post('/api/admin/backup', async (req, res) => {
   }
 });
 
+app.get('/api/admin/download', (req, res) => {
+  if (!auth(req.query.password)) return res.status(403).json({ error: 'Senha incorreta' });
+  const file = path.join(DATA_DIR, 'bolao.json');
+  res.setHeader('Content-Disposition', `attachment; filename="bolao-backup-${new Date().toISOString().slice(0,10)}.json"`);
+  res.setHeader('Content-Type', 'application/json');
+  res.sendFile(file);
+});
+
 // ── Helper ────────────────────────────────────────────────────────────────────
 
 function auth(password) { return password === db.getAdminPassword(); }
