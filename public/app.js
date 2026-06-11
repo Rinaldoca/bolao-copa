@@ -1133,6 +1133,47 @@ function renderMatchCard(m) {
     </div>`;
 }
 
+function renderMatchBetStats(bets) {
+  const n = bets.length;
+  const homeWins = bets.filter(b => b.home_score > b.away_score).length;
+  const draws    = bets.filter(b => b.home_score === b.away_score).length;
+  const awayWins = bets.filter(b => b.home_score < b.away_score).length;
+  const pHome = Math.round(homeWins / n * 100);
+  const pDraw = Math.round(draws    / n * 100);
+  const pAway = Math.round(awayWins / n * 100);
+
+  const avgHome = (bets.reduce((s, b) => s + b.home_score, 0) / n).toFixed(1);
+  const avgAway = (bets.reduce((s, b) => s + b.away_score, 0) / n).toFixed(1);
+
+  const scoreCount = {};
+  bets.forEach(b => { const k = `${b.home_score}×${b.away_score}`; scoreCount[k] = (scoreCount[k] || 0) + 1; });
+  const topScore = Object.entries(scoreCount).sort((a, b) => b[1] - a[1])[0];
+
+  const maxGoals = bets.reduce((m, b) => Math.max(m, b.home_score + b.away_score), 0);
+  const bigGame  = bets.find(b => b.home_score + b.away_score === maxGoals);
+
+  return `<div class="bet-stats-box">
+    <div class="bet-stats-row">
+      <span class="bsr-label">Tendência</span>
+      <div class="bsr-bar-wrap">
+        <div class="bsr-seg bsr-home" style="width:${pHome}%" title="Casa: ${pHome}%">${pHome > 12 ? pHome + '%' : ''}</div>
+        <div class="bsr-seg bsr-draw" style="width:${pDraw}%" title="Empate: ${pDraw}%">${pDraw > 12 ? pDraw + '%' : ''}</div>
+        <div class="bsr-seg bsr-away" style="width:${pAway}%" title="Visitante: ${pAway}%">${pAway > 12 ? pAway + '%' : ''}</div>
+      </div>
+      <div class="bsr-legend">
+        <span style="color:var(--green)">⬤ Casa ${pHome}%</span>
+        <span style="color:var(--text-3)">⬤ Emp ${pDraw}%</span>
+        <span style="color:var(--red)">⬤ Visit ${pAway}%</span>
+      </div>
+    </div>
+    <div class="bet-stats-pills">
+      <div class="bsp-item"><span class="bsp-val">${avgHome} × ${avgAway}</span><span class="bsp-sub">média de gols</span></div>
+      <div class="bsp-item"><span class="bsp-val">${topScore[0]}</span><span class="bsp-sub">placar mais apostado (${topScore[1]}x)</span></div>
+      <div class="bsp-item"><span class="bsp-val">${bigGame.home_score} × ${bigGame.away_score}</span><span class="bsp-sub">maior goleada prevista</span></div>
+    </div>
+  </div>`;
+}
+
 function renderAllBets(matchId, hideScores) {
   const bets = matchBetsCache[matchId];
   if (!bets) return '<div class="all-bets-list" style="color:var(--text-3);font-size:.8rem">Carregando...</div>';
@@ -1149,7 +1190,7 @@ function renderAllBets(matchId, hideScores) {
       ${b.status==='finished'?`<span class="fc-pts">${b.points}pt</span>`:''}
     </div>`;
   }).join('');
-  return `<div class="all-bets-list">${chips}</div>`;
+  return renderMatchBetStats(bets) + `<div class="all-bets-list">${chips}</div>`;
 }
 
 async function toggleAllBets(matchId, btn, hideScores) {

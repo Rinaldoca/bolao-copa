@@ -389,6 +389,21 @@ main { max-width: 860px; margin: 0 auto; padding: 28px 20px 60px; }
 .all-bets-section { padding: 10px 16px 12px; border-top: 1px solid var(--border); }
 .all-bets-list { display: flex; flex-wrap: wrap; gap: 6px; }
 
+/* ─── Match bet statistics ───────────────────────────────────────────────── */
+.bet-stats-box { margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px; }
+.bet-stats-row { display: flex; flex-direction: column; gap: 5px; }
+.bsr-label { font-size: .72rem; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: .04em; }
+.bsr-bar-wrap { display: flex; height: 22px; border-radius: 6px; overflow: hidden; width: 100%; }
+.bsr-seg { display: flex; align-items: center; justify-content: center; font-size: .72rem; font-weight: 700; color: #fff; transition: width .3s; min-width: 0; }
+.bsr-home { background: var(--green); }
+.bsr-draw { background: var(--text-3); }
+.bsr-away { background: var(--red); }
+.bsr-legend { display: flex; gap: 12px; font-size: .72rem; color: var(--text-3); }
+.bet-stats-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.bsp-item { background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px; padding: 6px 12px; display: flex; flex-direction: column; align-items: center; min-width: 90px; flex: 1; }
+.bsp-val { font-size: .95rem; font-weight: 800; color: var(--text-1); }
+.bsp-sub { font-size: .68rem; color: var(--text-3); margin-top: 2px; text-align: center; }
+
 /* ─── Inner tabs (inside a section) ─────────────────────────────────────── */
 .inner-tabs {
   display: flex;
