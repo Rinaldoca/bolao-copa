@@ -69,10 +69,25 @@ app.put('/api/matches/:id/result', (req, res) => {
   res.json(match);
 });
 
+app.post('/api/matches/:id/clear-result', (req, res) => {
+  if (!auth(req.body.password)) return res.status(403).json({ error: 'Senha incorreta' });
+  const match = db.clearMatchResult(Number(req.params.id));
+  if (!match) return res.status(404).json({ error: 'Partida não encontrada' });
+  res.json(match);
+});
+
 app.delete('/api/matches/:id', (req, res) => {
   if (!auth(req.body.password)) return res.status(403).json({ error: 'Senha incorreta' });
   db.deleteMatch(Number(req.params.id));
   res.json({ success: true });
+});
+
+app.post('/api/admin/bets', (req, res) => {
+  const { password, user_id, match_id, home_score, away_score } = req.body;
+  if (!auth(password)) return res.status(403).json({ error: 'Senha incorreta' });
+  const hs = parseInt(home_score), as_ = parseInt(away_score);
+  if (isNaN(hs) || isNaN(as_) || hs < 0 || as_ < 0) return res.status(400).json({ error: 'Placar inválido' });
+  res.json(db.upsertBet({ user_id: Number(user_id), match_id: Number(match_id), home_score: hs, away_score: as_ }));
 });
 
 // ── Bets ──────────────────────────────────────────────────────────────────────

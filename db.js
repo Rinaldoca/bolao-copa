@@ -205,6 +205,19 @@ function upsertKnockoutMatches(matches) {
   return { added, updated };
 }
 
+function clearMatchResult(id) {
+  const db = load();
+  const match = db.matches.find(m => m.id === id);
+  if (!match) return null;
+  match.home_score = null;
+  match.away_score = null;
+  match.status = 'upcoming';
+  db.bets.filter(b => b.match_id === id).forEach(b => { b.points = 0; });
+  db.feed = db.feed.filter(f => f.match_id !== id);
+  persist();
+  return match;
+}
+
 function deleteMatch(id) {
   const db = load();
   db.matches = db.matches.filter(m => m.id !== id);
@@ -523,7 +536,7 @@ function getGroupAwards() {
 
 module.exports = {
   getUsers, getUserById, createUser,
-  getMatches, getMatchById, createMatch, editMatch, setMatchResult, deleteMatch, replaceGroupStage,
+  getMatches, getMatchById, createMatch, editMatch, setMatchResult, clearMatchResult, deleteMatch, replaceGroupStage,
   getBets, upsertBet, clearUserBets, upsertKnockoutMatches,
   getSpecialBetsOpen, setSpecialBetsOpen,
   getChampionBets, upsertChampionBet, setChampion,

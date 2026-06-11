@@ -1603,7 +1603,35 @@ async function adminLogin() {
   loadAdminMatches();
   loadAdminSpecialStatus();
   loadSyncStatus();
+  loadAdminBetSelects();
   toast('Acesso liberado ✓', 'success');
+}
+
+async function loadAdminBetSelects() {
+  const [users, matches] = await Promise.all([api('/api/users'), api('/api/matches')]);
+  const uSel = document.getElementById('ab-user');
+  const mSel = document.getElementById('ab-match');
+  uSel.innerHTML = '<option value="">Selecione o usuário...</option>' +
+    (users||[]).map(u => `<option value="${u.id}">${u.name}</option>`).join('');
+  mSel.innerHTML = '<option value="">Selecione a partida...</option>' +
+    (matches||[]).map(m => {
+      const d = new Date(m.match_date).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Berlin'});
+      return `<option value="${m.id}">${m.home_team} × ${m.away_team} (${d})</option>`;
+    }).join('');
+}
+
+async function adminSetBet() {
+  const userId  = Number(document.getElementById('ab-user').value);
+  const matchId = Number(document.getElementById('ab-match').value);
+  const hs      = parseInt(document.getElementById('ab-home').value);
+  const as_     = parseInt(document.getElementById('ab-away').value);
+  if (!userId || !matchId) { toast('Selecione usuário e partida', 'error'); return; }
+  if (isNaN(hs) || isNaN(as_) || hs < 0 || as_ < 0) { toast('Preencha o placar', 'error'); return; }
+  const res = await api('/api/admin/bets', 'POST', { password: adminPwd, user_id: userId, match_id: matchId, home_score: hs, away_score: as_ });
+  if (res.error) { toast(res.error, 'error'); return; }
+  toast('Palpite salvo ✓', 'success');
+  matchBetsCache = {}; expandedBets.clear();
+  loadLeaderboard();
 }
 
 async function loadAdminSpecialStatus() {
@@ -1670,7 +1698,10 @@ async function loadAdminMatches() {
            </div>`}
       <div class="admin-actions">
         <button class="btn btn-secondary btn-sm" onclick="openEditModal(${m.id})">✏️</button>
-        <button class="btn btn-danger btn-sm"    onclick="adminDeleteMatch(${m.id})">✕</button>
+        ${m.status === 'finished'
+          ? `<button class="btn btn-danger btn-sm" onclick="adminClearResult(${m.id})" title="Limpar resultado">↩ Resultado</button>`
+          : `<button class="btn btn-danger btn-sm" onclick="adminDeleteMatch(${m.id})" title="Excluir partida">✕</button>`
+        }
       </div>
     </div>`;
   }).join('');
@@ -1683,6 +1714,16 @@ async function adminSaveResult(matchId) {
   const res = await api(`/api/matches/${matchId}/result`, 'PUT', { password: adminPwd, home_score: hs, away_score: as_ });
   if (res.error) { toast(res.error, 'error'); return; }
   toast(`${res.home_team} ${hs}–${as_} ${res.away_team} ✓`, 'success');
+  matchBetsCache = {}; expandedBets.clear();
+  loadAdminMatches(); loadLeaderboard(); loadSpecialAndFeed();
+  if (!document.getElementById('tab-matches').classList.contains('hidden')) loadMatches();
+}
+
+async function adminClearResult(matchId) {
+  if (!confirm('Limpar resultado? A partida volta para "a jogar" e os pontos são zerados.')) return;
+  const res = await api(`/api/matches/${matchId}/clear-result`, 'POST', { password: adminPwd });
+  if (res.error) { toast(res.error, 'error'); return; }
+  toast('Resultado removido ✓', 'info');
   matchBetsCache = {}; expandedBets.clear();
   loadAdminMatches(); loadLeaderboard(); loadSpecialAndFeed();
   if (!document.getElementById('tab-matches').classList.contains('hidden')) loadMatches();

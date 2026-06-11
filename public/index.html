@@ -215,6 +215,19 @@
           <button class="btn btn-primary" onclick="adminAddMatch()">Adicionar</button>
         </div>
 
+        <!-- Edit user bets -->
+        <div class="card">
+          <h3>✏️ Editar Palpite de Usuário</h3>
+          <p class="card-sub">Selecione o usuário e a partida para inserir ou corrigir um palpite manualmente.</p>
+          <div class="form-grid">
+            <select id="ab-user"  class="input"><option value="">Selecione o usuário...</option></select>
+            <select id="ab-match" class="input"><option value="">Selecione a partida...</option></select>
+            <input type="number" id="ab-home" class="input" placeholder="Gols casa" min="0" max="20">
+            <input type="number" id="ab-away" class="input" placeholder="Gols visitante" min="0" max="20">
+          </div>
+          <button class="btn btn-primary" onclick="adminSetBet()">Salvar palpite</button>
+        </div>
+
         <!-- Change password -->
         <div class="card">
           <h3>🔑 Alterar Senha</h3>
