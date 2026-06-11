@@ -567,7 +567,7 @@ function renderBracketCard(m) {
   const awayWon   = finished && m.away_score > m.home_score;
   const myBet     = userBets[m.id];
   const matchDate = new Date(m.match_date);
-  const dateShort = matchDate.toLocaleDateString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+  const dateShort = matchDate.toLocaleDateString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', timeZone:'Europe/Berlin' });
   const isPast    = Date.now() > matchDate.getTime() - 5 * 60 * 1000;
   const tbd       = m.home_team === 'A definir' || m.away_team === 'A definir';
 
@@ -952,7 +952,7 @@ function renderMatches() {
   if (viewMode === 'chronological') {
     container.innerHTML = renderSections(list, m => m.match_date.slice(0, 10), key => {
       const d = new Date(key + 'T12:00:00Z');
-      const label = d.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long' });
+      const label = d.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', timeZone:'Europe/Berlin' });
       const cap   = label.charAt(0).toUpperCase() + label.slice(1);
       return { name: cap, sub: null };
     });
@@ -1050,7 +1050,7 @@ function renderMatchCard(m) {
   const msLeft   = matchDate.getTime() - Date.now();
   const showCountdown = !finished && msLeft > 0 && msLeft < 48 * 60 * 60 * 1000;
 
-  const dateStr = matchDate.toLocaleDateString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+  const dateStr = matchDate.toLocaleDateString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', timeZone:'Europe/Berlin' });
 
   let badge;
   if (finished)     badge = '<span class="badge badge-finished">Encerrado</span>';
@@ -1821,7 +1821,7 @@ async function adminSaveEdit() {
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 function fmtDate(str) {
-  return new Date(str).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  return new Date(str).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', timeZone:'Europe/Berlin' });
 }
 
 function toast(msg, type = 'info') {
