@@ -277,6 +277,14 @@ async function backupToGist() {
 setInterval(backupToGist, 60 * 60 * 1000);
 setTimeout(backupToGist, 30 * 1000); // first run 30s after start
 
+app.post('/api/admin/reassign-match-id', (req, res) => {
+  const { password, from_id, to_id } = req.body;
+  if (!auth(password)) return res.status(403).json({ error: 'Senha incorreta' });
+  const result = db.reassignMatchId(Number(from_id), Number(to_id));
+  if (!result.ok) return res.status(400).json(result);
+  res.json(result);
+});
+
 app.post('/api/admin/backup', async (req, res) => {
   if (!auth(req.body.password)) return res.status(403).json({ error: 'Senha incorreta' });
   try {

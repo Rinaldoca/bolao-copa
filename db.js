@@ -218,6 +218,18 @@ function clearMatchResult(id) {
   return match;
 }
 
+function reassignMatchId(fromId, toId) {
+  const db = load();
+  if (db.matches.find(m => m.id === toId)) return { ok: false, error: `ID ${toId} já está em uso` };
+  const match = db.matches.find(m => m.id === fromId);
+  if (!match) return { ok: false, error: `Partida ${fromId} não encontrada` };
+  match.id = toId;
+  db.bets.filter(b => b.match_id === fromId).forEach(b => { b.match_id = toId; });
+  db.feed.filter(f => f.match_id === fromId).forEach(f => { f.match_id = toId; });
+  persist();
+  return { ok: true, match };
+}
+
 function deleteMatch(id) {
   const db = load();
   db.matches = db.matches.filter(m => m.id !== id);
@@ -536,7 +548,7 @@ function getGroupAwards() {
 
 module.exports = {
   getUsers, getUserById, createUser,
-  getMatches, getMatchById, createMatch, editMatch, setMatchResult, clearMatchResult, deleteMatch, replaceGroupStage,
+  getMatches, getMatchById, createMatch, editMatch, setMatchResult, clearMatchResult, reassignMatchId, deleteMatch, replaceGroupStage,
   getBets, upsertBet, clearUserBets, upsertKnockoutMatches,
   getSpecialBetsOpen, setSpecialBetsOpen,
   getChampionBets, upsertChampionBet, setChampion,
