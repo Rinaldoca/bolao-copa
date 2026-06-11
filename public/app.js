@@ -1180,7 +1180,7 @@ function renderAllBets(matchId, hideScores) {
   if (!bets.length) return '<div class="all-bets-list" style="color:var(--text-3);font-size:.8rem">Nenhum palpite.</div>';
   if (hideScores) {
     const names = bets.map(b => `<span class="feed-chip"><span class="fc-name">${b.user_name}</span></span>`).join('');
-    return `<div class="all-bets-list">${names}</div>`;
+    return renderMatchBetStats(bets) + `<div class="all-bets-list">${names}</div>`;
   }
   const chips = bets.map(b => {
     const cls = b.points === 3 ? 'pts-3' : b.points === 1 ? 'pts-1' : b.points === 0 && b.status === 'finished' ? 'pts-0' : '';
