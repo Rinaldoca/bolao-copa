@@ -165,12 +165,17 @@ async function syncMatches() {
   }
 
   let updated = 0, skipped = 0, notFound = 0;
+  const notFoundMatches = [];
 
   for (const local of pending) {
     const key = `${isoDay(local.match_date)}|${normalize(local.home_team)}|${normalize(local.away_team)}`;
     const hit = espnLookup[key];
 
-    if (!hit) { notFound++; continue; }
+    if (!hit) {
+      notFound++;
+      notFoundMatches.push({ id: local.id, home: local.home_team, away: local.away_team, date: isoDay(local.match_date) });
+      continue;
+    }
     if (!ESPN_FINISHED.has(hit.statusName) && !hit.completed) { skipped++; continue; }
     if (isNaN(hit.homeScore) || isNaN(hit.awayScore)) { skipped++; continue; }
 
@@ -178,7 +183,7 @@ async function syncMatches() {
     updated++;
   }
 
-  const result = { ok: true, updated, skipped, not_found: notFound, pending: pending.length, time: now.toISOString() };
+  const result = { ok: true, updated, skipped, not_found: notFound, not_found_matches: notFoundMatches, pending: pending.length, time: now.toISOString() };
   db.setLastSync(result);
   console.log(`[sync] ${result.time} — updated:${updated} skipped:${skipped} not_found:${notFound}`);
   return result;

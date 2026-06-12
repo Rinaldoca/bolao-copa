@@ -185,6 +185,11 @@ function upsertKnockoutMatches(matches) {
       if (m.away_team && m.away_team !== 'A definir') existing.away_team = m.away_team;
       existing.match_date = m.match_date;
       if (m.venue) existing.venue = m.venue;
+      if (m.status === 'finished' && existing.status !== 'finished') {
+        existing.status     = 'finished';
+        existing.home_score = m.home_score ?? null;
+        existing.away_score = m.away_score ?? null;
+      }
       updated++;
     } else {
       db.matches.push({
@@ -196,8 +201,9 @@ function upsertKnockoutMatches(matches) {
         stage:        m.stage,
         group_name:   null,
         venue:        m.venue || null,
-        home_score:   null, away_score: null,
-        status:       'upcoming',
+        home_score:   m.home_score ?? null,
+        away_score:   m.away_score ?? null,
+        status:       m.status || 'upcoming',
         created_at:   new Date().toISOString(),
       });
       added++;
@@ -403,9 +409,12 @@ function getPointsHistory() {
     db.bets.filter(b => b.match_id === m.id).forEach(b => {
       if (cumulative[b.user_id] !== undefined) cumulative[b.user_id] += b.points;
     });
+    const matchDay = m.match_date.slice(0, 10);
+    // Only include users who had joined by this match's date
+    const activeUsers = db.users.filter(u => !u.created_at || u.created_at.slice(0, 10) <= matchDay);
     return {
       label: `${m.home_team.split(' ')[0]} × ${m.away_team.split(' ')[0]}`,
-      snapshot: db.users.map(u => ({ id: u.id, name: u.name, pts: cumulative[u.id] || 0 })),
+      snapshot: activeUsers.map(u => ({ id: u.id, name: u.name, pts: cumulative[u.id] || 0 })),
     };
   });
 }

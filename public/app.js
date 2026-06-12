@@ -95,8 +95,9 @@ let allMatches     = [];
 let userBets       = {};
 let matchBetsCache = {};
 let expandedBets   = new Set();
-let statusFilter   = 'all';
-let stageFilter    = 'all';
+let statusFilter      = 'all';
+let stageFilter       = 'all';
+let showUnbettedOnly  = false;
 let lbStageFilter  = null;
 let viewMode       = localStorage.getItem('bolao_viewmode') || 'grouped';
 let collapsedGroups = new Set(JSON.parse(localStorage.getItem('bolao_collapsed') || '[]'));
@@ -678,16 +679,17 @@ function renderHistoryChart(history) {
     return;
   }
 
-  // Build series: index → {userId → pts}
+  // Build series: index → {userId → pts} (only users active at that snapshot)
   const series = history.map(h => {
     const map = {};
     h.snapshot.forEach(u => { map[u.id] = u.pts; });
     return map;
   });
 
-  // Rank at each step: sort by pts desc, ties share same rank
+  // Rank at each step: only rank users present in that snapshot
   const rankAt = series.map(s => {
-    const sorted = [...userIds].sort((a, b) => (s[b] || 0) - (s[a] || 0));
+    const present = userIds.filter(id => id in s);
+    const sorted = [...present].sort((a, b) => (s[b] || 0) - (s[a] || 0));
     const map = {};
     sorted.forEach((id, i) => { map[id] = i + 1; });
     return map;
@@ -730,10 +732,11 @@ function renderHistoryChart(history) {
 
   // Spread end labels by final rank (already spaced by innerH, but ensure min gap)
   const lastX = xScale(history.length - 1);
-  const endLabelInfo = userIds.map(id => {
-    const finalRank = rankAt[rankAt.length - 1][id] || N;
-    return { id, rawY: yScale(finalRank) };
-  }).sort((a, b) => a.rawY - b.rawY);
+  const lastRank = rankAt[rankAt.length - 1];
+  const endLabelInfo = userIds
+    .filter(id => id in lastRank)
+    .map(id => ({ id, rawY: yScale(lastRank[id]) }))
+    .sort((a, b) => a.rawY - b.rawY);
   const MIN_GAP = 12;
   for (let i = 1; i < endLabelInfo.length; i++) {
     if (endLabelInfo[i].rawY - endLabelInfo[i - 1].rawY < MIN_GAP)
@@ -745,12 +748,15 @@ function renderHistoryChart(history) {
   const lines = userIds.map((id, ci) => {
     const color = COLORS[ci % COLORS.length];
     const d = rankAt.map((r, i) => {
-      const rank = r[id] || N;
-      return `${i === 0 ? 'M' : 'L'}${xScale(i).toFixed(1)},${yScale(rank).toFixed(1)}`;
+      if (!(id in r)) return ''; // user not yet active
+      const rank = r[id];
+      const prevActive = i > 0 && id in rankAt[i - 1];
+      return `${prevActive ? 'L' : 'M'}${xScale(i).toFixed(1)},${yScale(rank).toFixed(1)}`;
     }).join(' ');
     const dots = rankAt.map((r, i) => {
-      const rank = r[id] || N;
-      const prev = i > 0 ? (rankAt[i - 1][id] || N) : null;
+      if (!(id in r)) return ''; // user not yet active
+      const rank = r[id];
+      const prev = i > 0 && id in rankAt[i - 1] ? rankAt[i - 1][id] : null;
       // Draw dot only when rank changes or at first/last point
       if (prev !== null && rank === prev && i !== rankAt.length - 1) return '';
       return `<circle cx="${xScale(i).toFixed(1)}" cy="${yScale(rank).toFixed(1)}" r="3.5" fill="${color}" stroke="var(--surface)" stroke-width="1.5"/>`;
@@ -927,6 +933,7 @@ function buildStagePills() {
   document.getElementById('view-toggle-row').innerHTML = `
     <button class="pill ${viewMode === 'grouped'       ? 'active' : ''}" onclick="setViewMode('grouped',this)">📊 Por Grupo</button>
     <button class="pill ${viewMode === 'chronological' ? 'active' : ''}" onclick="setViewMode('chronological',this)">📅 Cronológico</button>
+    ${currentUser ? `<button class="pill ${showUnbettedOnly ? 'active' : ''}" onclick="toggleUnbettedFilter(this)" title="Mostrar apenas jogos abertos sem palpite">🎯 Sem palpite</button>` : ''}
     <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="toggleAllGroups()" title="Expandir/colapsar tudo">⊞</button>
     ${currentUser ? `<button class="btn btn-ghost btn-sm" onclick="randomizeBets()" title="Preencher palpites aleatórios nos jogos ainda não apostados">🎲 Randomizar</button>` : ''}
     ${currentUser ? `<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="confirmClearBets()" title="Apagar todos os seus palpites em jogos ainda não iniciados">🗑 Limpar</button>` : ''}`;
@@ -985,12 +992,22 @@ function setStageFilter(f, btn) {
   renderMatches();
 }
 
+function toggleUnbettedFilter(btn) {
+  showUnbettedOnly = !showUnbettedOnly;
+  btn.classList.toggle('active', showUnbettedOnly);
+  renderMatches();
+}
+
 function renderMatches() {
   const container = document.getElementById('matches-container');
   let list = allMatches;
   if (statusFilter === 'upcoming') list = list.filter(m => m.status === 'upcoming');
   if (statusFilter === 'finished') list = list.filter(m => m.status === 'finished');
   if (stageFilter  !== 'all')      list = list.filter(m => m.stage === stageFilter);
+  if (showUnbettedOnly && currentUser) {
+    const LOCK_MS = 5 * 60 * 1000;
+    list = list.filter(m => m.status === 'upcoming' && !userBets[m.id] && Date.now() < new Date(m.match_date).getTime() - LOCK_MS);
+  }
 
   if (!list.length) {
     container.innerHTML = '<div class="empty"><span class="icon">⚽</span>Nenhuma partida encontrada.</div>';
@@ -1071,22 +1088,25 @@ let _countdownTimer = null;
 function startCountdownTimer() {
   if (_countdownTimer) return;
   _countdownTimer = setInterval(() => {
+    const els = document.querySelectorAll('.match-countdown[data-ts]');
+    if (!els.length) { clearInterval(_countdownTimer); _countdownTimer = null; return; }
     const now = Date.now();
-    document.querySelectorAll('.match-countdown[data-ts]').forEach(el => {
-      const ts = Number(el.dataset.ts);
-      const remaining = ts - now;
+    let anyExpired = false;
+    els.forEach(el => {
+      const remaining = Number(el.dataset.ts) - now;
       const label = fmtCountdown(remaining);
       if (label) {
         el.textContent = label;
-        // urgent styling when under 30 min
         el.classList.toggle('countdown-urgent', remaining < 30 * 60 * 1000);
       } else {
-        // time's up — re-render matches to lock the bet input
-        clearInterval(_countdownTimer);
-        _countdownTimer = null;
-        renderMatches();
+        anyExpired = true;
       }
     });
+    if (anyExpired) {
+      clearInterval(_countdownTimer);
+      _countdownTimer = null;
+      renderMatches();
+    }
   }, 1000);
 }
 
@@ -1135,10 +1155,12 @@ function renderMatchCard(m) {
       <div class="bet-inputs">
         <input type="number" class="bet-score-input" id="bh-${m.id}" min="0" max="20"
           value="${hasBet ? bet.home_score : ''}" placeholder="0"
+          oninput="this.value=Math.min(20,Math.max(0,parseInt(this.value)||0))"
           onblur="autoSaveBet(${m.id})" onkeydown="if(event.key==='Enter'){this.blur()}">
         <span class="bet-x">×</span>
         <input type="number" class="bet-score-input" id="ba-${m.id}" min="0" max="20"
           value="${hasBet ? bet.away_score : ''}" placeholder="0"
+          oninput="this.value=Math.min(20,Math.max(0,parseInt(this.value)||0))"
           onblur="autoSaveBet(${m.id})" onkeydown="if(event.key==='Enter'){this.blur()}">
       </div>
       <span class="auto-bet-status" id="abs-${m.id}">${hasBet ? '✓' : ''}</span>
@@ -1844,7 +1866,9 @@ async function loadSyncStatus() {
       <span>${s.updated} resultado(s) atualizado(s)</span>
       <span class="sync-time">${fmtDate(s.time)}</span>
     </div>
-    ${s.not_found > 0 ? `<p class="card-sub" style="margin-top:6px">⚠️ ${s.not_found} partida(s) não encontradas na API (podem ter nomes diferentes).</p>` : ''}`;
+    ${s.not_found > 0 ? `<p class="card-sub" style="margin-top:6px">⚠️ ${s.not_found} partida(s) não encontrada(s) na ESPN:${
+      (s.not_found_matches || []).map(m => `<br>&nbsp;&nbsp;• ${m.home} × ${m.away} (${m.date})`).join('')
+    }</p>` : ''}`;
 }
 
 async function adminSync() {
@@ -1950,6 +1974,10 @@ function openEditModal(matchId) {
 }
 function closeEditModal() {
   editingMatchId = null;
+  ['em-home','em-away','em-date','em-group','em-stage','em-venue'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
   document.getElementById('edit-modal').classList.add('hidden');
   document.getElementById('edit-modal-overlay').classList.add('hidden');
 }

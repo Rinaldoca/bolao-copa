@@ -48,6 +48,9 @@ app.post('/api/matches', (req, res) => {
   const { password, home_team, away_team, match_date, stage, group_name, venue } = req.body;
   if (!auth(password)) return res.status(403).json({ error: 'Senha incorreta' });
   if (!home_team || !away_team || !match_date) return res.status(400).json({ error: 'Times e data são obrigatórios' });
+  const ht = home_team.trim().toLowerCase(), at = away_team.trim().toLowerCase(), day = match_date.slice(0, 10);
+  const dup = db.getMatches().find(m => m.home_team.toLowerCase() === ht && m.away_team.toLowerCase() === at && m.match_date.slice(0, 10) === day);
+  if (dup) return res.status(400).json({ error: `Partida já existe: ${home_team.trim()} vs ${away_team.trim()}` });
   res.json(db.createMatch({ home_team: home_team.trim(), away_team: away_team.trim(), match_date, stage, group_name: group_name || null, venue: venue || null }));
 });
 
