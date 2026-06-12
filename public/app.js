@@ -188,16 +188,21 @@ function closePlayerModal() {
   document.getElementById('player-modal-overlay').classList.add('hidden');
 }
 
-async function openPlayerModal(userId, name, pts, exact, correct) {
+async function openPlayerModal(userId, name) {
   document.getElementById('player-modal-title').textContent = `${name}`;
   document.getElementById('player-modal-body').innerHTML = '<div class="empty" style="padding:24px 0"><span class="icon">⏳</span>Carregando...</div>';
   document.getElementById('player-modal').classList.remove('hidden');
   document.getElementById('player-modal-overlay').classList.remove('hidden');
 
-  const [bets, special] = await Promise.all([
+  const [bets, special, lb] = await Promise.all([
     api(`/api/bets?user_id=${userId}`),
     api('/api/special-bets'),
+    api('/api/leaderboard'),
   ]);
+  const lbEntry = (lb || []).find(p => p.id === userId) || {};
+  const pts     = lbEntry.total_points    || 0;
+  const exact   = lbEntry.exact_scores    || 0;
+  const correct = lbEntry.correct_results || 0;
 
   const champBet  = (special?.champion_bets  || []).find(b => b.user_id === userId);
   const scorerBet = (special?.scorer_bets    || []).find(b => b.user_id === userId);
@@ -355,7 +360,7 @@ async function loadLeaderboard() {
         <div style="text-align:center">🎯</div><div style="text-align:center">✅</div>
       </div>
       ${data.map((p, i) => `
-        <div class="lb-row ${currentUser?.id === p.id ? 'is-me' : ''}" onclick="openPlayerModal(${p.id},'${p.name.replace(/'/g,"&#39;")}',${p.total_points},${p.exact_scores},${p.correct_results})" style="cursor:pointer">
+        <div class="lb-row ${currentUser?.id === p.id ? 'is-me' : ''}" onclick="openPlayerModal(${p.id},'${p.name.replace(/'/g,"&#39;")}')" style="cursor:pointer">
           <div class="lb-rank ${rankClass[i]||''}">${rankEmoji[i]||(i+1)}</div>
           <div>
             <div class="lb-name">${p.name}</div>
@@ -517,6 +522,8 @@ function renderThirdsRanking() {
 
 /* ─── Bracket ────────────────────────────────────────────────────────────── */
 const BRACKET_STAGES = ['32 avos de Final', 'Oitavas de Final', 'Quartas de Final', 'Semifinal', 'Final'];
+const STAGE_ORDER    = ['Fase de Grupos', '32 avos de Final', 'Oitavas de Final', 'Quartas de Final', 'Semifinal', 'Terceiro Lugar', 'Final'];
+function stageRank(key) { const s = key.split('|||')[0]; const i = STAGE_ORDER.indexOf(s); return i === -1 ? 99 : i; }
 const BRACKET_COUNTS = { '32 avos de Final': 16, 'Oitavas de Final': 8, 'Quartas de Final': 4, 'Semifinal': 2, 'Final': 1 };
 
 function renderBracket() {
@@ -649,12 +656,18 @@ function renderHistoryChart(history) {
     return;
   }
 
-  // Collect all users that appear
+  // Collect all users across all snapshots
   const userIds = [];
   const userNames = {};
-  (history[0]?.snapshot || []).forEach(u => {
-    userIds.push(u.id);
-    userNames[u.id] = u.name;
+  const seenIds = new Set();
+  history.forEach(h => {
+    (h.snapshot || []).forEach(u => {
+      if (!seenIds.has(u.id)) {
+        seenIds.add(u.id);
+        userIds.push(u.id);
+        userNames[u.id] = u.name;
+      }
+    });
   });
   if (!userIds.length) {
     wrap.innerHTML = '<div class="history-chart-wrap"><p class="hc-empty">Nenhum participante ainda.</p></div>';
@@ -668,24 +681,38 @@ function renderHistoryChart(history) {
     return map;
   });
 
-  const maxPts = Math.max(1, ...series.map(s => Math.max(...userIds.map(id => s[id] || 0))));
+  // Rank at each step: sort by pts desc, ties share same rank
+  const rankAt = series.map(s => {
+    const sorted = [...userIds].sort((a, b) => (s[b] || 0) - (s[a] || 0));
+    const map = {};
+    sorted.forEach((id, i) => { map[id] = i + 1; });
+    return map;
+  });
+
+  const N = userIds.length;
   const W = Math.max(400, history.length * 48);
-  const H = 180;
-  const PAD = { top: 12, right: 16, bottom: 32, left: 36 };
+  const PAD = { top: 16, right: 90, bottom: 32, left: 32 };
   const innerW = W - PAD.left - PAD.right;
-  const innerH = H - PAD.top - PAD.bottom;
+  const innerH = Math.max(100, (N - 1) * 28);
+  const H = PAD.top + innerH + PAD.bottom;
 
   const xScale = i => PAD.left + (history.length < 2 ? innerW / 2 : (i / (history.length - 1)) * innerW);
-  const yScale = v => PAD.top + innerH - (v / maxPts) * innerH;
+  // Rank 1 at top, rank N at bottom
+  const yScale = r => PAD.top + ((r - 1) / Math.max(1, N - 1)) * innerH;
 
   const COLORS = ['#009C3B','#FFD600','#2563eb','#dc2626','#7c3aed','#f97316','#06b6d4','#84cc16'];
 
-  // Grid lines
-  const gridLines = [0, 0.25, 0.5, 0.75, 1].map(t => {
-    const y = PAD.top + innerH * (1 - t);
-    const val = Math.round(maxPts * t);
-    return `<line x1="${PAD.left}" y1="${y}" x2="${PAD.left + innerW}" y2="${y}" stroke="var(--border)" stroke-width="1"/>
-            <text x="${PAD.left - 5}" y="${y + 4}" text-anchor="end" font-size="10" fill="var(--text-3)">${val}</text>`;
+  // Dashed horizontal grid lines, one per rank
+  const gridLines = Array.from({ length: N }, (_, i) => {
+    const y = yScale(i + 1);
+    return `<line x1="${PAD.left}" y1="${y}" x2="${PAD.left + innerW}" y2="${y}" stroke="var(--border)" stroke-width="1" stroke-dasharray="3,3"/>`;
+  }).join('');
+
+  // Y axis: rank labels
+  const yLabels = Array.from({ length: N }, (_, i) => {
+    const r = i + 1;
+    const label = r <= 3 ? ['1º','2º','3º'][r - 1] : `${r}º`;
+    return `<text x="${PAD.left - 5}" y="${yScale(r) + 4}" text-anchor="end" font-size="10" fill="var(--text-3)">${label}</text>`;
   }).join('');
 
   // X axis labels (every N steps to avoid crowding)
@@ -693,29 +720,46 @@ function renderHistoryChart(history) {
   const xLabels = history.map((h, i) => {
     if (i % step !== 0 && i !== history.length - 1) return '';
     const x = xScale(i);
-    const label = h.label.split(' ')[0]; // first word
+    const label = h.label.split(' ')[0];
     return `<text x="${x}" y="${H - 4}" text-anchor="middle" font-size="9" fill="var(--text-3)" transform="rotate(-35,${x},${H - 4})">${label}</text>`;
   }).join('');
+
+  // Spread end labels by final rank (already spaced by innerH, but ensure min gap)
+  const lastX = xScale(history.length - 1);
+  const endLabelInfo = userIds.map(id => {
+    const finalRank = rankAt[rankAt.length - 1][id] || N;
+    return { id, rawY: yScale(finalRank) };
+  }).sort((a, b) => a.rawY - b.rawY);
+  const MIN_GAP = 12;
+  for (let i = 1; i < endLabelInfo.length; i++) {
+    if (endLabelInfo[i].rawY - endLabelInfo[i - 1].rawY < MIN_GAP)
+      endLabelInfo[i].rawY = endLabelInfo[i - 1].rawY + MIN_GAP;
+  }
+  const labelY = Object.fromEntries(endLabelInfo.map(el => [el.id, el.rawY]));
 
   // Lines & dots per user
   const lines = userIds.map((id, ci) => {
     const color = COLORS[ci % COLORS.length];
-    const pts = history.map((_, i) => series[i][id] || 0);
-    const d = pts.map((v, i) => `${i === 0 ? 'M' : 'L'}${xScale(i).toFixed(1)},${yScale(v).toFixed(1)}`).join(' ');
-    const lastX = xScale(history.length - 1);
-    const lastY = yScale(pts[pts.length - 1]);
-    const dots = pts.map((v, i) => {
-      if (i !== 0 && i !== pts.length - 1 && pts[i] === pts[i - 1]) return '';
-      return `<circle cx="${xScale(i).toFixed(1)}" cy="${yScale(v).toFixed(1)}" r="3" fill="${color}"/>`;
+    const d = rankAt.map((r, i) => {
+      const rank = r[id] || N;
+      return `${i === 0 ? 'M' : 'L'}${xScale(i).toFixed(1)},${yScale(rank).toFixed(1)}`;
+    }).join(' ');
+    const dots = rankAt.map((r, i) => {
+      const rank = r[id] || N;
+      const prev = i > 0 ? (rankAt[i - 1][id] || N) : null;
+      // Draw dot only when rank changes or at first/last point
+      if (prev !== null && rank === prev && i !== rankAt.length - 1) return '';
+      return `<circle cx="${xScale(i).toFixed(1)}" cy="${yScale(rank).toFixed(1)}" r="3.5" fill="${color}" stroke="var(--surface)" stroke-width="1.5"/>`;
     }).join('');
     return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
             ${dots}
-            <text x="${lastX + 5}" y="${lastY + 4}" font-size="10" fill="${color}" font-weight="700">${userNames[id].split(' ')[0]}</text>`;
+            <text x="${lastX + 6}" y="${labelY[id] + 4}" font-size="10" fill="${color}" font-weight="700">${userNames[id].split(' ')[0]}</text>`;
   }).join('');
 
   wrap.innerHTML = `<div class="history-chart-wrap">
     <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="min-width:${W}px">
       ${gridLines}
+      ${yLabels}
       ${xLabels}
       ${lines}
     </svg>
@@ -972,7 +1016,7 @@ function renderSections(list, keyFn, labelFn) {
     (sections[k] = sections[k] || []).push(m);
   });
 
-  return Object.entries(sections).sort(([a], [b]) => a.localeCompare(b)).map(([key, matches]) => {
+  return Object.entries(sections).sort(([a], [b]) => stageRank(a) - stageRank(b) || a.localeCompare(b)).map(([key, matches]) => {
     const collapsed  = collapsedGroups.has(key);
     const { name, sub } = labelFn(key);
 
@@ -1234,6 +1278,7 @@ async function autoSaveBet(matchId) {
   const hs  = parseInt(hInput.value);
   const as_ = parseInt(aInput.value);
   if (isNaN(hs) || isNaN(as_) || hs < 0 || as_ < 0) return;
+  const isNew = !userBets[matchId];
   const statusEl = document.getElementById(`abs-${matchId}`);
   if (statusEl) { statusEl.textContent = '…'; statusEl.className = 'auto-bet-status saving'; }
   const result = await api('/api/bets', 'POST', { user_id: currentUser.id, match_id: matchId, home_score: hs, away_score: as_ });
@@ -1243,6 +1288,10 @@ async function autoSaveBet(matchId) {
     return;
   }
   userBets[matchId] = result;
+  if (isNew) {
+    const m = allMatches.find(m => m.id === matchId);
+    if (m) m.bet_count = (m.bet_count || 0) + 1;
+  }
   if (statusEl) { statusEl.textContent = '✓'; statusEl.className = 'auto-bet-status saved'; }
   loadLeaderboard();
 }
@@ -1437,7 +1486,7 @@ function renderGroupAwards(awards) {
 
   const card = (emoji, title, award, valueFn, subFn) => {
     if (!award) return `<div class="award-card award-empty"><div class="award-emoji">${emoji}</div><div class="award-title">${title}</div><div class="award-empty-msg">Sem dados ainda</div></div>`;
-    return `<div class="award-card" onclick="openPlayerModal(${award.id},'${award.name.replace(/'/g,"&#39;")}',0,0,0)" style="cursor:pointer">
+    return `<div class="award-card" onclick="openPlayerModal(${award.id},'${award.name.replace(/'/g,"&#39;")}')" style="cursor:pointer">
       <div class="award-emoji">${emoji}</div>
       <div class="award-title">${title}</div>
       <div class="award-winner">${award.name}</div>
@@ -1676,6 +1725,7 @@ async function adminSetScorer() {
 
 async function loadAdminMatches() {
   const matches = await api('/api/matches') || [];
+  allMatches = matches; // keep global in sync so openEditModal finds new matches
   const wrap = document.getElementById('admin-match-list');
   if (!matches.length) {
     wrap.innerHTML = '<div class="empty" style="padding:16px 0">Nenhuma partida.</div>'; return;
