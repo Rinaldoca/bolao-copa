@@ -16,20 +16,26 @@
         <span class="logo-ball">🍺</span>
         <div>
           <span class="logo-title">Bolão dos Alcoólatras</span>
-          <span class="logo-sub">Copa do Mundo 2026</span>
+          <span class="logo-sub" data-i18n="logo_sub">Copa do Mundo 2026</span>
         </div>
       </div>
-      <button id="userBtn" class="user-btn" onclick="openUserModal()">
-        <span id="userBtnIcon">👤</span>
-        <span id="userBtnText">Entrar</span>
-      </button>
+      <div class="header-right">
+        <div class="lang-pills">
+          <button class="lang-pill active" data-lang="pt" onclick="setLang('pt')">PT</button>
+          <button class="lang-pill" data-lang="en" onclick="setLang('en')">EN</button>
+        </div>
+        <button id="userBtn" class="user-btn" onclick="openUserModal()">
+          <span id="userBtnIcon">👤</span>
+          <span id="userBtnText" data-i18n="login_btn">Entrar</span>
+        </button>
+      </div>
     </div>
     <nav class="tab-bar">
-      <button class="tab active" data-tab="leaderboard" onclick="showTab('leaderboard')">🏆 Placar</button>
-      <button class="tab" data-tab="bracket"     onclick="showTab('bracket')">🗂 Chaveamento</button>
-      <button class="tab" data-tab="matches"     onclick="showTab('matches')">⚽ Partidas<span id="pending-badge" class="pending-badge hidden"></span></button>
-      <button class="tab" data-tab="me"          onclick="showTab('me')">👤 Eu</button>
-      <button class="tab" data-tab="admin"       onclick="showTab('admin')">⚙️ Admin</button>
+      <button class="tab active" data-tab="leaderboard" onclick="showTab('leaderboard')" data-i18n="tab_lb">🏆 Placar</button>
+      <button class="tab" data-tab="bracket"     onclick="showTab('bracket')" data-i18n="tab_bracket">🗂 Chaveamento</button>
+      <button class="tab" data-tab="matches"     onclick="showTab('matches')"><span data-i18n="tab_matches">⚽ Partidas</span><span id="pending-badge" class="pending-badge hidden"></span></button>
+      <button class="tab" data-tab="me"          onclick="showTab('me')" data-i18n="tab_me">👤 Eu</button>
+      <button class="tab" data-tab="admin"       onclick="showTab('admin')" data-i18n="tab_admin">⚙️ Admin</button>
     </nav>
   </header>
 
@@ -39,49 +45,49 @@
     <section id="tab-leaderboard" class="tab-pane">
       <div class="pane-header">
         <div>
-          <h2>Placar</h2>
-          <p class="pane-sub">🎯 Exato <strong>3 pts</strong> &nbsp;·&nbsp; ✅ Resultado <strong>1 pt</strong> &nbsp;·&nbsp; 🏆 Campeão <strong>10 pts</strong> &nbsp;·&nbsp; ⚽ Artilheiro <strong>5 pts</strong></p>
+          <h2 data-i18n="lb_title">Placar</h2>
+          <p class="pane-sub" data-i18n-html="lb_subtitle">🎯 Exato <strong>3 pts</strong> &nbsp;·&nbsp; ✅ Resultado <strong>1 pt</strong> &nbsp;·&nbsp; 🏆 Campeão <strong>10 pts</strong> &nbsp;·&nbsp; ⚽ Artilheiro <strong>5 pts</strong></p>
         </div>
         <button class="btn btn-ghost btn-sm" onclick="loadAll()">↻</button>
       </div>
       <div id="rules-card" class="rules-card">
         <button class="rules-toggle" onclick="toggleRules()">
-          <span>📋 Como funciona o bolão</span><span id="rules-arrow">▾</span>
+          <span data-i18n="rules_title">📋 Como funciona o bolão</span><span id="rules-arrow">▾</span>
         </button>
         <div id="rules-body" class="rules-body hidden">
           <div class="rules-grid">
-            <div class="rules-item"><span class="rules-pts">3 pts</span><div><strong>🎯 Placar exato</strong><p>Acertou o resultado e o número de gols de cada time.</p></div></div>
-            <div class="rules-item"><span class="rules-pts">1 pt</span><div><strong>✅ Resultado certo</strong><p>Acertou quem ganhou ou que deu empate, mas errou o placar.</p></div></div>
-            <div class="rules-item"><span class="rules-pts">10 pts</span><div><strong>🏆 Campeão</strong><p>Acertou o time campeão do Mundial.</p></div></div>
-            <div class="rules-item"><span class="rules-pts">5 pts</span><div><strong>⚽ Artilheiro</strong><p>Acertou o jogador com mais gols no torneio.</p></div></div>
+            <div class="rules-item"><span class="rules-pts" data-i18n="rules_3pts">3 pts</span><div><strong data-i18n="rules_exact_title">🎯 Placar exato</strong><p data-i18n="rules_exact_desc">Acertou o resultado e o número de gols de cada time.</p></div></div>
+            <div class="rules-item"><span class="rules-pts" data-i18n="rules_1pt">1 pt</span><div><strong data-i18n="rules_result_title">✅ Resultado certo</strong><p data-i18n="rules_result_desc">Acertou quem ganhou ou que deu empate, mas errou o placar.</p></div></div>
+            <div class="rules-item"><span class="rules-pts" data-i18n="rules_10pts">10 pts</span><div><strong data-i18n="rules_champ_title">🏆 Campeão</strong><p data-i18n="rules_champ_desc">Acertou o time campeão do Mundial.</p></div></div>
+            <div class="rules-item"><span class="rules-pts" data-i18n="rules_5pts">5 pts</span><div><strong data-i18n="rules_scorer_title">⚽ Artilheiro</strong><p data-i18n="rules_scorer_desc">Acertou o jogador com mais gols no torneio.</p></div></div>
           </div>
-          <p class="rules-note">⏱ Apostas fecham <strong>5 minutos antes</strong> de cada jogo começar. Palpites de campeão e artilheiro são controlados pelo admin.</p>
+          <p class="rules-note" data-i18n-html="rules_lock">⏱ Apostas fecham <strong>5 minutos antes</strong> de cada jogo começar. Palpites de campeão e artilheiro são controlados pelo admin.</p>
         </div>
       </div>
       <div id="lb-stage-pills" class="filter-row lb-stage-pill-row" style="margin-bottom:12px"></div>
       <div id="lb-container"></div>
-      <div class="section-divider" id="awards-divider"><span>🏅 Destaques do Grupo</span></div>
+      <div class="section-divider" id="awards-divider"><span data-i18n="div_awards">🏅 Destaques do Grupo</span></div>
       <div id="awards-container"></div>
-      <div class="section-divider" id="history-divider"><span>📈 Disputa pela Liderança</span></div>
+      <div class="section-divider" id="history-divider"><span data-i18n="div_history">📈 Disputa pela Liderança</span></div>
       <div id="history-container"></div>
-      <div class="section-divider" id="special-divider"><span>🏆 Palpites de Campeão &amp; Artilheiro</span></div>
+      <div class="section-divider" id="special-divider"><span data-i18n-html="div_special">🏆 Palpites de Campeão &amp; Artilheiro</span></div>
       <div class="special-grid" id="special-grid"></div>
-      <div class="section-divider"><span>⚡ Feed de Resultados</span></div>
+      <div class="section-divider"><span data-i18n="div_feed">⚡ Feed de Resultados</span></div>
       <div id="feed-container"></div>
     </section>
 
     <!-- ──────────── CHAVEAMENTO ──────────── -->
     <section id="tab-bracket" class="tab-pane hidden">
       <div class="pane-header">
-        <div><h2>Chaveamento</h2></div>
+        <div><h2 data-i18n="bracket_title">Chaveamento</h2></div>
         <button class="btn btn-ghost btn-sm" onclick="renderBracketTab()">↻</button>
       </div>
 
       <!-- Inner sub-tabs -->
       <div class="inner-tabs">
-        <button class="inner-tab active" onclick="showBracketTab('standings', this)">📊 Grupos</button>
-        <button class="inner-tab"        onclick="showBracketTab('thirds',    this)">🥉 Terceiros</button>
-        <button class="inner-tab"        onclick="showBracketTab('bracket',   this)">🏆 Chaveamento</button>
+        <button class="inner-tab active" onclick="showBracketTab('standings', this)" data-i18n="bracket_groups">📊 Grupos</button>
+        <button class="inner-tab"        onclick="showBracketTab('thirds',    this)" data-i18n="bracket_thirds">🥉 Terceiros</button>
+        <button class="inner-tab"        onclick="showBracketTab('bracket',   this)" data-i18n="bracket_bracket">🏆 Chaveamento</button>
       </div>
 
       <div id="brtab-standings">
@@ -91,7 +97,7 @@
         <div id="thirds-container"></div>
       </div>
       <div id="brtab-bracket" class="hidden">
-        <p class="pane-sub" style="margin-bottom:16px">As partidas são adicionadas pelo admin conforme os times se classificam.</p>
+        <p class="pane-sub" style="margin-bottom:16px" data-i18n="bracket_note">As partidas são adicionadas pelo admin conforme os times se classificam.</p>
         <div id="bracket-container"></div>
       </div>
     </section>
@@ -100,15 +106,15 @@
     <section id="tab-matches" class="tab-pane hidden">
       <div class="pane-header">
         <div>
-          <h2>Partidas</h2>
+          <h2 data-i18n="matches_title">Partidas</h2>
           <p id="matches-user-hint" class="pane-sub"></p>
         </div>
       </div>
       <div class="filter-row">
         <div class="filter-group" id="status-pills">
-          <button class="pill active" onclick="setStatusFilter('all',this)">Todas</button>
-          <button class="pill" onclick="setStatusFilter('upcoming',this)">Abertas</button>
-          <button class="pill" onclick="setStatusFilter('finished',this)">Encerradas</button>
+          <button class="pill active" onclick="setStatusFilter('all',this)" data-i18n="filter_all">Todas</button>
+          <button class="pill" onclick="setStatusFilter('upcoming',this)" data-i18n="filter_open">Abertas</button>
+          <button class="pill" onclick="setStatusFilter('finished',this)" data-i18n="filter_finished">Encerradas</button>
         </div>
       </div>
       <div class="filter-row" id="stage-pills-row" style="margin-top:8px"></div>
@@ -120,30 +126,30 @@
     <section id="tab-me" class="tab-pane hidden">
       <div id="me-no-user" class="empty">
         <span class="icon">👤</span>
-        <p>Selecione seu perfil para ver sua página.</p>
-        <button class="btn btn-primary" style="margin-top:14px" onclick="openUserModal()">Entrar</button>
+        <p data-i18n="me_no_user">Selecione seu perfil para ver sua página.</p>
+        <button class="btn btn-primary" style="margin-top:14px" onclick="openUserModal()" data-i18n="me_enter_btn">Entrar</button>
       </div>
       <div id="me-content" class="hidden">
         <div class="me-header" id="me-header"></div>
         <div class="me-stats" id="me-stats"></div>
         <div class="special-grid" id="me-special"></div>
         <div id="me-detailed-stats"></div>
-        <div class="section-divider"><span>Meus Palpites</span></div>
+        <div class="section-divider"><span data-i18n="div_my_bets">Meus Palpites</span></div>
         <div id="me-bets"></div>
       </div>
     </section>
 
     <!-- ──────────── ADMIN ──────────── -->
     <section id="tab-admin" class="tab-pane hidden">
-      <div class="pane-header"><div><h2>Administração</h2></div></div>
+      <div class="pane-header"><div><h2 data-i18n="admin_title">Administração</h2></div></div>
 
       <div id="admin-login-card" class="card">
-        <h3>🔐 Acesso restrito</h3>
-        <p class="card-sub">Digite a senha de administrador para continuar.</p>
+        <h3 data-i18n="admin_restricted">🔐 Acesso restrito</h3>
+        <p class="card-sub" data-i18n="admin_pwd_hint">Digite a senha de administrador para continuar.</p>
         <div class="field-row">
-          <input type="password" id="adminPwdInput" class="input" placeholder="Senha admin"
+          <input type="password" id="adminPwdInput" class="input" data-i18n-placeholder="admin_pwd_placeholder" placeholder="Senha admin"
             onkeydown="if(event.key==='Enter') adminLogin()">
-          <button class="btn btn-primary" onclick="adminLogin()">Entrar</button>
+          <button class="btn btn-primary" onclick="adminLogin()" data-i18n="admin_enter">Entrar</button>
         </div>
       </div>
 
@@ -247,15 +253,15 @@
   <div id="modal-overlay" class="modal-overlay hidden" onclick="closeUserModal()"></div>
   <div id="user-modal" class="modal hidden">
     <div class="modal-header">
-      <h3>Selecionar jogador</h3>
+      <h3 data-i18n="um_title">Selecionar jogador</h3>
       <button class="close-btn" onclick="closeUserModal()">✕</button>
     </div>
     <div id="users-list-wrap"></div>
-    <div class="modal-sep">ou crie seu perfil</div>
+    <div class="modal-sep" data-i18n="um_or">ou crie seu perfil</div>
     <div class="field-row">
-      <input type="text" id="newUserInput" class="input" placeholder="Seu nome" maxlength="30"
+      <input type="text" id="newUserInput" class="input" data-i18n-placeholder="um_placeholder" placeholder="Seu nome" maxlength="30"
         onkeydown="if(event.key==='Enter') createUser()">
-      <button class="btn btn-primary" onclick="createUser()">Criar</button>
+      <button class="btn btn-primary" onclick="createUser()" data-i18n="um_create">Criar</button>
     </div>
   </div>
 
@@ -297,6 +303,7 @@
     </div>
   </div>
 
+  <script src="i18n.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

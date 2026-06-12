@@ -26,13 +26,13 @@ function renderChampionPicker(currentValue) {
     <div class="cp-wrap" id="cp-wrap">
       <button type="button" class="cp-btn" id="cp-btn" onclick="cpToggle(event)">
         <span class="cp-value" id="cp-value">
-          ${team ? `<span class="cp-flag">${team.f}</span><span>${team.n}</span>` : `<span class="cp-placeholder">Escolha a seleção...</span>`}
+          ${team ? `<span class="cp-flag">${team.f}</span><span>${team.n}</span>` : `<span class="cp-placeholder">${t('cp_placeholder')}</span>`}
         </span>
         <span class="cp-arrow" id="cp-arrow">▾</span>
       </button>
       <div class="cp-dropdown hidden" id="cp-dropdown">
         <div class="cp-search-wrap">
-          <input class="cp-search" id="cp-search" type="text" placeholder="🔍  Buscar seleção..." oninput="cpFilter(this.value)" autocomplete="off">
+          <input class="cp-search" id="cp-search" type="text" placeholder="${t('cp_search')}" oninput="cpFilter(this.value)" autocomplete="off">
         </div>
         <div class="cp-list" id="cp-list">
           ${WC2026_TEAMS.map(t => `
@@ -129,7 +129,7 @@ async function loadAll() {
       document.getElementById('userBtnIcon').textContent = '👤';
       document.getElementById('userBtnText').textContent = 'Entrar';
       document.getElementById('userBtn').classList.remove('logged-in');
-      toast('Sua sessão expirou. Selecione seu perfil novamente.', 'info');
+      toast(t('toast_expired'), 'info');
     }
   }
   await Promise.all([loadLeaderboard(), loadMatches()]);
@@ -148,7 +148,7 @@ async function api(url, method = 'GET', body = null) {
       return { error: `Erro HTTP ${res.status}` };
     }
   } catch (err) {
-    toast('Erro de conexão — verifique sua internet', 'error');
+    toast(t('toast_connection'), 'error');
     return { error: err.message };
   }
 }
@@ -174,8 +174,8 @@ function setUser(user, notify = true) {
   document.getElementById('userBtnText').textContent = user.name;
   document.getElementById('userBtn').classList.add('logged-in');
   const hint = document.getElementById('matches-user-hint');
-  if (hint) hint.textContent = `Apostando como: ${user.name}`;
-  if (notify) toast(`Bem-vindo, ${user.name}! ⚽`, 'success');
+  if (hint) hint.textContent = `${t('betting_as')} ${user.name}`;
+  if (notify) toast(`${getCurrentLang() === 'en' ? 'Welcome' : 'Bem-vindo'}, ${user.name}! ⚽`, 'success');
 }
 
 function openUserModal() {
@@ -195,7 +195,7 @@ function closePlayerModal() {
 
 async function openPlayerModal(userId, name) {
   document.getElementById('player-modal-title').textContent = `${name}`;
-  document.getElementById('player-modal-body').innerHTML = '<div class="empty" style="padding:24px 0"><span class="icon">⏳</span>Carregando...</div>';
+  document.getElementById('player-modal-body').innerHTML = `<div class="empty" style="padding:24px 0"><span class="icon">⏳</span>${t('pm_loading')}</div>`;
   document.getElementById('player-modal').classList.remove('hidden');
   document.getElementById('player-modal-overlay').classList.remove('hidden');
 
@@ -256,12 +256,12 @@ async function openPlayerModal(userId, name) {
       });
       rivalryHtml = `
         <div class="rivalry-bar">
-          <span style="font-weight:700">⚔️ vs você</span>
-          <span style="color:var(--text-3)">${shared.length} jogo${shared.length!==1?'s':''} em comum</span>
-          <span>Você: <strong>${myPts} pts</strong> · ${name}: <strong>${theirPts} pts</strong></span>
-          <span class="rivalry-badge win">${wins}V</span>
-          <span class="rivalry-badge draw">${draws}E</span>
-          <span class="rivalry-badge loss">${losses}D</span>
+          <span style="font-weight:700">${t('pm_rivalry')}</span>
+          <span style="color:var(--text-3)">${shared.length} ${shared.length!==1 ? (getCurrentLang()==='en'?'games':'jogos') : (getCurrentLang()==='en'?'game':'jogo')} ${getCurrentLang()==='en'?'in common':'em comum'}</span>
+          <span>${t('pm_you')} <strong>${myPts} pts</strong> · ${name}: <strong>${theirPts} pts</strong></span>
+          <span class="rivalry-badge win">${wins}${t('pm_win')}</span>
+          <span class="rivalry-badge draw">${draws}${t('pm_draw')}</span>
+          <span class="rivalry-badge loss">${losses}${t('pm_loss')}</span>
         </div>`;
     }
   }
@@ -269,23 +269,23 @@ async function openPlayerModal(userId, name) {
   document.getElementById('player-modal-body').innerHTML = `
     ${rivalryHtml}
     <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;gap:20px;flex-wrap:wrap">
-      <div style="text-align:center"><div style="font-size:1.8rem;font-weight:900;color:var(--gold)">${pts}</div><div style="font-size:.72rem;color:var(--text-3)">pontos</div></div>
-      <div style="text-align:center"><div style="font-size:1.4rem;font-weight:900;color:var(--green)">${exact}</div><div style="font-size:.72rem;color:var(--text-3)">🎯 exatos</div></div>
-      <div style="text-align:center"><div style="font-size:1.4rem;font-weight:900;color:var(--blue)">${correct}</div><div style="font-size:.72rem;color:var(--text-3)">✅ certos</div></div>
-      ${champBet ? `<div style="flex:1;min-width:120px"><div style="font-size:.7rem;color:var(--text-3);margin-bottom:2px">🏆 Campeão</div><div style="font-weight:700${champWon?' ;color:var(--gold)':''}">${champBet.team}${champWon?' ✓':''}</div></div>` : ''}
-      ${scorerBet ? `<div style="flex:1;min-width:120px"><div style="font-size:.7rem;color:var(--text-3);margin-bottom:2px">⚽ Artilheiro</div><div style="font-weight:700${scorerWon?';color:var(--gold)':''}">${scorerBet.name}${scorerWon?' ✓':''}</div></div>` : ''}
+      <div style="text-align:center"><div style="font-size:1.8rem;font-weight:900;color:var(--gold)">${pts}</div><div style="font-size:.72rem;color:var(--text-3)">${t('pm_points')}</div></div>
+      <div style="text-align:center"><div style="font-size:1.4rem;font-weight:900;color:var(--green)">${exact}</div><div style="font-size:.72rem;color:var(--text-3)">${t('pm_exact')}</div></div>
+      <div style="text-align:center"><div style="font-size:1.4rem;font-weight:900;color:var(--blue)">${correct}</div><div style="font-size:.72rem;color:var(--text-3)">${t('pm_results')}</div></div>
+      ${champBet ? `<div style="flex:1;min-width:120px"><div style="font-size:.7rem;color:var(--text-3);margin-bottom:2px">${t('pm_champion')}</div><div style="font-weight:700${champWon?' ;color:var(--gold)':''}">${champBet.team}${champWon?' ✓':''}</div></div>` : ''}
+      ${scorerBet ? `<div style="flex:1;min-width:120px"><div style="font-size:.7rem;color:var(--text-3);margin-bottom:2px">${t('pm_scorer')}</div><div style="font-weight:700${scorerWon?';color:var(--gold)':''}">${scorerBet.name}${scorerWon?' ✓':''}</div></div>` : ''}
     </div>
     <div style="padding:8px 20px 16px">
-      ${betRows || '<div class="empty" style="padding:20px 0"><span class="icon">🎲</span>Sem palpites ainda.</div>'}
+      ${betRows || `<div class="empty" style="padding:20px 0"><span class="icon">🎲</span>${t('pm_no_bets')}</div>`}
     </div>`;
 }
 
 async function renderUsersList() {
   const wrap = document.getElementById('users-list-wrap');
-  wrap.innerHTML = '<div style="color:var(--text-3);font-size:.85rem;padding:8px 0">Carregando...</div>';
+  wrap.innerHTML = `<div style="color:var(--text-3);font-size:.85rem;padding:8px 0">${t('um_loading')}</div>`;
   const users = await api('/api/users');
   if (!Array.isArray(users) || !users.length) {
-    wrap.innerHTML = '<div class="empty" style="padding:12px 0"><span class="icon">👤</span>Nenhum jogador ainda.</div>';
+    wrap.innerHTML = `<div class="empty" style="padding:12px 0"><span class="icon">👤</span>${t('um_no_players')}</div>`;
     return;
   }
   wrap.innerHTML = `<div class="users-list">${users.map(u => `
@@ -327,9 +327,9 @@ async function loadLeaderboard() {
       allMatches.filter(m => m.status === 'finished').map(m => m.stage).filter(Boolean)
     )];
     const pills = [
-      `<button class="pill${lbStageFilter === null ? ' active' : ''}" onclick="setLbStage(null, this)">Geral</button>`,
+      `<button class="pill${lbStageFilter === null ? ' active' : ''}" onclick="setLbStage(null, this)">${t('lb_general')}</button>`,
       ...stagesWithFinished.map(s =>
-        `<button class="pill${lbStageFilter === s ? ' active' : ''}" onclick="setLbStage('${s.replace(/'/g,"&#39;")}', this)">${s}</button>`
+        `<button class="pill${lbStageFilter === s ? ' active' : ''}" onclick="setLbStage('${s.replace(/'/g,"&#39;")}', this)">${tStage(s)}</button>`
       ),
     ].join('');
     pillsWrap.innerHTML = `<div class="filter-group">${pills}</div>`;
@@ -353,7 +353,7 @@ async function loadLeaderboard() {
   }
 
   if (!data.length) {
-    wrap.innerHTML = '<div class="empty"><span class="icon">🏆</span>Ninguém no placar ainda.</div>';
+    wrap.innerHTML = `<div class="empty"><span class="icon">🏆</span>${t('lb_empty')}</div>`;
     return;
   }
   const rankEmoji = ['🥇','🥈','🥉'];
@@ -361,7 +361,7 @@ async function loadLeaderboard() {
   wrap.innerHTML = `
     <div class="lb-table">
       <div class="lb-header">
-        <div>#</div><div>Jogador</div><div style="text-align:right">Pts</div>
+        <div>#</div><div>${t('lb_col_player')}</div><div style="text-align:right">${t('lb_col_pts')}</div>
         <div style="text-align:center">🎯</div><div style="text-align:center">✅</div>
       </div>
       ${data.map((p, i) => `
@@ -369,7 +369,7 @@ async function loadLeaderboard() {
           <div class="lb-rank ${rankClass[i]||''}">${rankEmoji[i]||(i+1)}</div>
           <div>
             <div class="lb-name">${p.name}</div>
-            <div class="lb-bets">${p.total_bets} palpite${p.total_bets!==1?'s':''}</div>
+            <div class="lb-bets">${p.total_bets} ${p.total_bets!==1?t('lb_bets_n'):t('lb_bets_1')}</div>
           </div>
           <div class="lb-pts">${p.total_points}</div>
           <div class="lb-stat">${p.exact_scores}</div>
@@ -434,16 +434,16 @@ function buildGroupStandings() {
     }));
 }
 
-function standingsRow(t, i, extraCells = '') {
-  const sg = t.GP - t.GC;
+function standingsRow(row, i, extraCells = '') {
+  const sg = row.GP - row.GC;
   return `<tr class="${i < 2 ? 'classified' : i === 2 ? 'possible' : ''}">
     <td class="td-pos">${i + 1}</td>
-    <td class="td-team">${flag(t.team)}${t.team}</td>
+    <td class="td-team">${flag(row.team)}${row.team}</td>
     ${extraCells}
-    <td>${t.J}</td><td>${t.V}</td><td>${t.E}</td><td>${t.D}</td>
-    <td>${t.GP}</td><td>${t.GC}</td>
+    <td>${row.J}</td><td>${row.V}</td><td>${row.E}</td><td>${row.D}</td>
+    <td>${row.GP}</td><td>${row.GC}</td>
     <td class="${sg > 0 ? 'sg-pos' : sg < 0 ? 'sg-neg' : ''}">${sg > 0 ? '+' : ''}${sg}</td>
-    <td class="td-pts">${t.Pts}</td>
+    <td class="td-pts">${row.Pts}</td>
   </tr>`;
 }
 
@@ -452,29 +452,29 @@ function renderGroupStandings() {
   if (!wrap) return;
   const groups = buildGroupStandings();
   if (!groups.length) {
-    wrap.innerHTML = '<div class="empty"><span class="icon">📊</span>Nenhuma partida da fase de grupos cadastrada.</div>';
+    wrap.innerHTML = `<div class="empty"><span class="icon">📊</span>${t('standings_empty')}</div>`;
     return;
   }
   wrap.innerHTML = `
     <div class="standings-grid">
       ${groups.map(({ name, sorted }) => `
         <div class="standings-group">
-          <div class="standings-title">Grupo ${name}</div>
+          <div class="standings-title">${t('standings_group')} ${name}</div>
           <table class="standings-table">
             <thead><tr>
-              <th></th><th class="th-team">Seleção</th>
-              <th title="Jogos">J</th><th title="Vitórias">V</th>
-              <th title="Empates">E</th><th title="Derrotas">D</th>
-              <th title="Gols pró">GP</th><th title="Gols contra">GC</th>
-              <th title="Saldo">SG</th><th class="th-pts" title="Pontos">Pts</th>
+              <th></th><th class="th-team">${t('standings_col_team')}</th>
+              <th>J</th><th>V</th>
+              <th>E</th><th>D</th>
+              <th>GP</th><th>GC</th>
+              <th>SG</th><th class="th-pts">${t('lb_col_pts')}</th>
             </tr></thead>
-            <tbody>${sorted.map((t, i) => standingsRow(t, i)).join('')}</tbody>
+            <tbody>${sorted.map((team, i) => standingsRow(team, i)).join('')}</tbody>
           </table>
         </div>`).join('')}
     </div>
     <p class="standings-legend">
-      <span class="legend-dot classified"></span> 1º e 2º classificados &nbsp;·&nbsp;
-      <span class="legend-dot possible"></span> 3º lugar
+      <span class="legend-dot classified"></span> ${t('standings_qualified')} &nbsp;·&nbsp;
+      <span class="legend-dot possible"></span> ${t('standings_third')}
     </p>`;
 }
 
@@ -483,7 +483,7 @@ function renderThirdsRanking() {
   if (!wrap) return;
   const groups = buildGroupStandings();
   if (!groups.length) {
-    wrap.innerHTML = '<div class="empty"><span class="icon">🥉</span>Nenhuma partida da fase de grupos cadastrada.</div>';
+    wrap.innerHTML = `<div class="empty"><span class="icon">🥉</span>${t('standings_empty')}</div>`;
     return;
   }
   const thirds = groups
@@ -492,36 +492,36 @@ function renderThirdsRanking() {
     .sort((a, b) => (b.Pts - a.Pts) || ((b.GP - b.GC) - (a.GP - a.GC)) || (b.GP - a.GP) || a.team.localeCompare(b.team));
 
   wrap.innerHTML = `
-    <p class="pane-sub" style="margin-bottom:16px">As <strong>8 melhores</strong> terceiras colocadas (de 12 grupos) avançam para as oitavas de final.</p>
+    <p class="pane-sub" style="margin-bottom:16px" data-i18n-html="thirds_sub">${t('thirds_sub')}</p>
     <div class="standings-group" style="max-width:580px">
       <table class="standings-table">
         <thead><tr>
-          <th></th><th class="th-team">Seleção</th><th title="Grupo">Gr</th>
-          <th title="Jogos">J</th><th title="Vitórias">V</th>
-          <th title="Empates">E</th><th title="Derrotas">D</th>
-          <th title="Gols pró">GP</th><th title="Gols contra">GC</th>
-          <th title="Saldo">SG</th><th class="th-pts" title="Pontos">Pts</th>
+          <th></th><th class="th-team">${t('standings_col_team')}</th><th>${t('thirds_col_group')}</th>
+          <th>J</th><th>V</th>
+          <th>E</th><th>D</th>
+          <th>GP</th><th>GC</th>
+          <th>SG</th><th class="th-pts">${t('lb_col_pts')}</th>
         </tr></thead>
         <tbody>
-          ${thirds.map((t, i) => {
-            const sg = t.GP - t.GC;
+          ${thirds.map((row, i) => {
+            const sg = row.GP - row.GC;
             const rowClass = i < 8 ? 'classified' : 'eliminated';
             return `<tr class="${rowClass}">
               <td class="td-pos">${i + 1}</td>
-              <td class="td-team">${flag(t.team)}${t.team}</td>
-              <td style="color:var(--text-3);font-size:.78rem">${t.group}</td>
-              <td>${t.J}</td><td>${t.V}</td><td>${t.E}</td><td>${t.D}</td>
-              <td>${t.GP}</td><td>${t.GC}</td>
+              <td class="td-team">${flag(row.team)}${row.team}</td>
+              <td style="color:var(--text-3);font-size:.78rem">${row.group}</td>
+              <td>${row.J}</td><td>${row.V}</td><td>${row.E}</td><td>${row.D}</td>
+              <td>${row.GP}</td><td>${row.GC}</td>
               <td class="${sg > 0 ? 'sg-pos' : sg < 0 ? 'sg-neg' : ''}">${sg > 0 ? '+' : ''}${sg}</td>
-              <td class="td-pts">${t.Pts}</td>
+              <td class="td-pts">${row.Pts}</td>
             </tr>`;
           }).join('')}
         </tbody>
       </table>
     </div>
     <p class="standings-legend" style="max-width:580px;margin-top:10px">
-      <span class="legend-dot classified"></span> Avança para as oitavas &nbsp;·&nbsp;
-      <span class="legend-dot eliminated"></span> Eliminado
+      <span class="legend-dot classified"></span> ${t('thirds_advances')} &nbsp;·&nbsp;
+      <span class="legend-dot eliminated"></span> ${t('thirds_eliminated')}
     </p>`;
 }
 
@@ -547,8 +547,8 @@ function renderBracket() {
     ${!hasAny ? `
       <div class="bracket-empty">
         <span class="icon" style="font-size:2rem">🏆</span>
-        <p style="font-weight:700;font-size:1rem;margin-bottom:6px">Fase eliminatória a caminho</p>
-        <p style="color:var(--text-3);font-size:.85rem">As partidas serão adicionadas pelo admin conforme os times se classificam.</p>
+        <p style="font-weight:700;font-size:1rem;margin-bottom:6px">${t('bracket_empty_title')}</p>
+        <p style="color:var(--text-3);font-size:.85rem">${t('bracket_empty_sub')}</p>
       </div>` : ''}
     <div class="bracket-wrapper">
       ${BRACKET_STAGES.map(stage => {
@@ -558,7 +558,7 @@ function renderBracket() {
 
         return `
           <div class="bracket-col">
-            <div class="bracket-col-title">${stage}</div>
+            <div class="bracket-col-title">${tStage(stage)}</div>
             <div class="bracket-col-matches">
               ${matches.map(m => renderBracketCard(m)).join('')}
               ${Array.from({ length: slots - matches.length }, () => renderBracketCardEmpty()).join('')}
@@ -568,7 +568,7 @@ function renderBracket() {
     </div>
     ${thirdMatches.length ? `
       <div class="bracket-third">
-        <div class="bracket-col-title" style="margin-bottom:10px">🥉 Terceiro Lugar</div>
+        <div class="bracket-col-title" style="margin-bottom:10px">${t('bracket_third_place')}</div>
         ${thirdMatches.map(renderBracketCard).join('')}
       </div>` : ''}`;
 }
@@ -579,7 +579,7 @@ function renderBracketCard(m) {
   const awayWon   = finished && m.away_score > m.home_score;
   const myBet     = userBets[m.id];
   const matchDate = new Date(m.match_date);
-  const dateShort = matchDate.toLocaleDateString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', timeZone:'Europe/Berlin' });
+  const dateShort = matchDate.toLocaleDateString(dateLocale(), { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', timeZone:'Europe/Berlin' });
   const isPast    = Date.now() > matchDate.getTime() - 5 * 60 * 1000;
   const tbd       = m.home_team === 'A definir' || m.away_team === 'A definir';
 
@@ -593,7 +593,7 @@ function renderBracketCard(m) {
   } else if (isPast && myBet) {
     betLine = `<div class="bracket-bet" style="color:var(--text-3);font-size:.72rem">⏳ ${myBet.home_score}-${myBet.away_score}</div>`;
   } else if (isPast) {
-    betLine = `<div class="bracket-bet" style="color:var(--text-3);font-size:.72rem">⏳ apostas encerradas</div>`;
+    betLine = `<div class="bracket-bet" style="color:var(--text-3);font-size:.72rem">${t('bracket_bets_closed')}</div>`;
   } else if (!tbd && currentUser) {
     betLine = `<div class="bracket-bet bracket-bet-inputs">
       <input type="number" class="bracket-score-input" id="bh-${m.id}" min="0" max="20"
@@ -606,7 +606,7 @@ function renderBracketCard(m) {
       <span class="auto-bet-status" id="abs-${m.id}" style="font-size:.8rem">${myBet ? '✓' : ''}</span>
     </div>`;
   } else if (!tbd && !currentUser) {
-    betLine = `<div class="bracket-bet" style="color:var(--text-3);font-size:.72rem"><a href="#" onclick="openUserModal();return false;" style="color:var(--gold)">Entre</a> para apostar</div>`;
+    betLine = `<div class="bracket-bet" style="color:var(--text-3);font-size:.72rem"><a href="#" onclick="openUserModal();return false;" style="color:var(--gold)">${t('login_to_bet_link')}</a> ${t('login_to_bet_suffix')}</div>`;
   }
 
   return `
@@ -627,8 +627,8 @@ function renderBracketCard(m) {
 function renderBracketCardEmpty() {
   return `
     <div class="bracket-card bracket-card-tbd">
-      <div class="bracket-team"><span class="bracket-team-name">A definir</span></div>
-      <div class="bracket-team"><span class="bracket-team-name">A definir</span></div>
+      <div class="bracket-team"><span class="bracket-team-name">${t('bracket_tbd')}</span></div>
+      <div class="bracket-team"><span class="bracket-team-name">${t('bracket_tbd')}</span></div>
     </div>`;
 }
 
@@ -657,7 +657,7 @@ function renderHistoryChart(history) {
   const wrap = document.getElementById('history-container');
   if (!wrap) return;
   if (!history.length) {
-    wrap.innerHTML = '<div class="history-chart-wrap"><p class="hc-empty">Nenhum resultado registrado ainda.</p></div>';
+    wrap.innerHTML = `<div class="history-chart-wrap"><p class="hc-empty">${t('history_empty')}</p></div>`;
     return;
   }
 
@@ -675,7 +675,7 @@ function renderHistoryChart(history) {
     });
   });
   if (!userIds.length) {
-    wrap.innerHTML = '<div class="history-chart-wrap"><p class="hc-empty">Nenhum participante ainda.</p></div>';
+    wrap.innerHTML = `<div class="history-chart-wrap"><p class="hc-empty">${t('history_no_participants')}</p></div>`;
     return;
   }
 
@@ -787,12 +787,12 @@ function renderSpecialGrid(special, containerId) {
   const scorerBets  = special?.scorer_bets   || [];
 
   const statusBadge = champOpen
-    ? '<span class="special-card-open">🟢 Apostas abertas</span>'
-    : '<span class="special-card-closed">🔒 Apostas encerradas</span>';
+    ? `<span class="special-card-open">${t('special_open')}</span>`
+    : `<span class="special-card-closed">${t('special_closed')}</span>`;
 
   const renderRows = (bets, resultVal, getVal) =>
     bets.length === 0
-      ? '<p style="color:var(--text-3);font-size:.8rem;padding:8px 0">Nenhum palpite ainda.</p>'
+      ? `<p style="color:var(--text-3);font-size:.8rem;padding:8px 0">${t('special_no_bets')}</p>`
       : bets.map(b => {
           const val = getVal(b);
           const won = resultVal && val.toLowerCase() === resultVal.toLowerCase();
@@ -809,13 +809,13 @@ function renderSpecialGrid(special, containerId) {
 
   wrap.innerHTML = `
     <div class="special-card">
-      <div class="special-card-title">🏆 Campeão</div>
+      <div class="special-card-title">${t('special_champion')}</div>
       ${statusBadge}
       ${champResult ? `<div class="special-card-result">✓ ${champResult}</div>` : ''}
       ${renderRows(champBets, champResult, getChampVal)}
     </div>
     <div class="special-card">
-      <div class="special-card-title">⚽ Artilheiro</div>
+      <div class="special-card-title">${t('special_scorer')}</div>
       ${statusBadge}
       ${scorerResult ? `<div class="special-card-result">✓ ${scorerResult}</div>` : ''}
       ${renderRows(scorerBets, scorerResult, getScorerVal)}
@@ -826,7 +826,7 @@ function renderFeed(feed) {
   const wrap = document.getElementById('feed-container');
   if (!wrap) return;
   if (!feed?.length) {
-    wrap.innerHTML = '<p class="feed-empty">Nenhum resultado registrado ainda.</p>';
+    wrap.innerHTML = `<p class="feed-empty">${t('feed_empty')}</p>`;
     return;
   }
   wrap.innerHTML = feed.map(entry => {
@@ -848,7 +848,7 @@ function renderFeed(feed) {
             <div class="feed-date">${fmtDate(entry.timestamp)}</div>
           </div>
         </div>
-        ${chips ? `<div class="feed-results">${chips}</div>` : '<p style="color:var(--text-3);font-size:.8rem">Sem palpites.</p>'}
+        ${chips ? `<div class="feed-results">${chips}</div>` : `<p style="color:var(--text-3);font-size:.8rem">${t('feed_no_bets')}</p>`}
       </div>`;
     }
     if (entry.type === 'champion_result') {
@@ -860,7 +860,7 @@ function renderFeed(feed) {
         </div>`).join('');
       return `<div class="feed-entry">
         <div class="feed-header">
-          <div><div class="feed-title">🏆 Campeão: ${entry.team}</div><div class="feed-date">${fmtDate(entry.timestamp)}</div></div>
+          <div><div class="feed-title">${t('feed_champion')} ${entry.team}</div><div class="feed-date">${fmtDate(entry.timestamp)}</div></div>
         </div>
         <div class="feed-results">${chips}</div>
       </div>`;
@@ -874,7 +874,7 @@ function renderFeed(feed) {
         </div>`).join('');
       return `<div class="feed-entry">
         <div class="feed-header">
-          <div><div class="feed-title">⚽ Artilheiro: ${entry.name}</div><div class="feed-date">${fmtDate(entry.timestamp)}</div></div>
+          <div><div class="feed-title">${t('feed_scorer')} ${entry.name}</div><div class="feed-date">${fmtDate(entry.timestamp)}</div></div>
         </div>
         <div class="feed-results">${chips}</div>
       </div>`;
@@ -890,7 +890,7 @@ async function loadMatches() {
     const bets = await api(`/api/bets?user_id=${currentUser.id}`) || [];
     userBets = {};
     bets.forEach(b => { userBets[b.match_id] = b; });
-    document.getElementById('matches-user-hint').textContent = `Apostando como: ${currentUser.name}`;
+    document.getElementById('matches-user-hint').textContent = `${t('betting_as')} ${currentUser.name}`;
   } else {
     userBets = {};
     document.getElementById('matches-user-hint').textContent = '';
@@ -926,17 +926,17 @@ function buildStagePills() {
     row.innerHTML = ['all', ...stages].map(s => `
       <button class="pill ${stageFilter === s ? 'active' : ''}"
         onclick="setStageFilter('${s}', this)">
-        ${s === 'all' ? 'Todas etapas' : s}
+        ${s === 'all' ? t('all_stages') : tStage(s)}
       </button>`).join('');
   }
 
   document.getElementById('view-toggle-row').innerHTML = `
-    <button class="pill ${viewMode === 'grouped'       ? 'active' : ''}" onclick="setViewMode('grouped',this)">📊 Por Grupo</button>
-    <button class="pill ${viewMode === 'chronological' ? 'active' : ''}" onclick="setViewMode('chronological',this)">📅 Cronológico</button>
-    ${currentUser ? `<button class="pill ${showUnbettedOnly ? 'active' : ''}" onclick="toggleUnbettedFilter(this)" title="Mostrar apenas jogos abertos sem palpite">🎯 Sem palpite</button>` : ''}
-    <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="toggleAllGroups()" title="Expandir/colapsar tudo">⊞</button>
-    ${currentUser ? `<button class="btn btn-ghost btn-sm" onclick="randomizeBets()" title="Preencher palpites aleatórios nos jogos ainda não apostados">🎲 Randomizar</button>` : ''}
-    ${currentUser ? `<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="confirmClearBets()" title="Apagar todos os seus palpites em jogos ainda não iniciados">🗑 Limpar</button>` : ''}`;
+    <button class="pill ${viewMode === 'grouped'       ? 'active' : ''}" onclick="setViewMode('grouped',this)">${t('view_grouped')}</button>
+    <button class="pill ${viewMode === 'chronological' ? 'active' : ''}" onclick="setViewMode('chronological',this)">${t('view_chrono')}</button>
+    ${currentUser ? `<button class="pill ${showUnbettedOnly ? 'active' : ''}" onclick="toggleUnbettedFilter(this)">${t('no_bet_filter')}</button>` : ''}
+    <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="toggleAllGroups()">⊞</button>
+    ${currentUser ? `<button class="btn btn-ghost btn-sm" onclick="randomizeBets()">${t('randomize_btn')}</button>` : ''}
+    ${currentUser ? `<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="confirmClearBets()">${t('clear_bets_btn')}</button>` : ''}`;
 }
 
 function setViewMode(mode, btn) {
@@ -1010,21 +1010,21 @@ function renderMatches() {
   }
 
   if (!list.length) {
-    container.innerHTML = '<div class="empty"><span class="icon">⚽</span>Nenhuma partida encontrada.</div>';
+    container.innerHTML = `<div class="empty"><span class="icon">⚽</span>${t('matches_empty')}</div>`;
     return;
   }
 
   if (viewMode === 'chronological') {
     container.innerHTML = renderSections(list, m => m.match_date.slice(0, 10), key => {
       const d = new Date(key + 'T12:00:00Z');
-      const label = d.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', timeZone:'Europe/Berlin' });
+      const label = d.toLocaleDateString(dateLocale(), { weekday:'long', day:'2-digit', month:'long', timeZone:'Europe/Berlin' });
       const cap   = label.charAt(0).toUpperCase() + label.slice(1);
       return { name: cap, sub: null };
     });
   } else {
     container.innerHTML = renderSections(list, m => m.group_name ? `${m.stage}|||${m.group_name}` : m.stage, key => {
       const [stage, group] = key.split('|||');
-      return group ? { name: `Grupo ${group}`, sub: stage } : { name: stage, sub: null };
+      return group ? { name: `${t('standings_group')} ${group}`, sub: tStage(stage) } : { name: tStage(stage), sub: null };
     });
   }
   startCountdownTimer();
@@ -1048,8 +1048,8 @@ function renderSections(list, keyFn, labelFn) {
     const teams = [...new Set(matches.flatMap(m => [m.home_team, m.away_team]))];
 
     const stats = [
-      openCount > 0 ? `<span class="gstat gstat-open">${openCount} abertas</span>`    : '',
-      doneCount > 0 ? `<span class="gstat gstat-done">${doneCount} encerradas</span>` : '',
+      openCount > 0 ? `<span class="gstat gstat-open">${openCount} ${t('group_open')}</span>`    : '',
+      doneCount > 0 ? `<span class="gstat gstat-done">${doneCount} ${t('group_done')}</span>` : '',
       myBets    > 0 ? `<span class="gstat gstat-bet">✓ ${myBets}</span>`              : '',
     ].filter(Boolean).join('');
 
@@ -1118,12 +1118,12 @@ function renderMatchCard(m) {
   const msLeft   = matchDate.getTime() - Date.now();
   const showCountdown = !finished && msLeft > 0 && msLeft < 48 * 60 * 60 * 1000;
 
-  const dateStr = matchDate.toLocaleDateString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', timeZone:'Europe/Berlin' });
+  const dateStr = matchDate.toLocaleDateString(dateLocale(), { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', timeZone:'Europe/Berlin' });
 
   let badge;
-  if (finished)     badge = '<span class="badge badge-finished">Encerrado</span>';
-  else if (isPast)  badge = '<span class="badge badge-closed">Em breve</span>';
-  else              badge = '<span class="badge badge-open">Aberto</span>';
+  if (finished)     badge = `<span class="badge badge-finished">${t('badge_finished')}</span>`;
+  else if (isPast)  badge = `<span class="badge badge-closed">${t('badge_closing')}</span>`;
+  else              badge = `<span class="badge badge-open">${t('badge_open')}</span>`;
 
   const vsBlock = finished
     ? `<div class="vs-block"><div class="vs-scores"><div class="vs-box">${m.home_score}</div><span class="vs-sep">×</span><div class="vs-box">${m.away_score}</div></div></div>`
@@ -1137,21 +1137,21 @@ function renderMatchCard(m) {
     betBar = `<div class="bet-bar">
       ${bet
         ? `<div class="bet-result-row">
-            <span class="bet-label">Palpite:</span>
+            <span class="bet-label">${t('bet_label')}</span>
             <span class="bet-prediction">${bet.home_score}×${bet.away_score}</span>
             <span class="pts-chip ${chipClass}">${pts} pt${pts!==1?'s':''}</span>
             <span>${emoji}</span>
            </div>`
-        : `<span class="no-bet-msg">Sem palpite</span>`}
+        : `<span class="no-bet-msg">${t('no_bet_msg')}</span>`}
     </div>`;
   } else if (isPast) {
-    betBar = `<div class="bet-bar"><span class="no-bet-msg">⏳ Apostas encerradas${bet ? ` · Palpite: <strong>${bet.home_score}×${bet.away_score}</strong>` : ''}</span></div>`;
+    betBar = `<div class="bet-bar"><span class="no-bet-msg">${t('bets_closed_no_bet')}${bet ? ` · ${t('bet_label')} <strong>${bet.home_score}×${bet.away_score}</strong>` : ''}</span></div>`;
   } else if (!currentUser) {
-    betBar = `<div class="bet-bar"><span class="no-bet-msg"><a href="#" onclick="openUserModal();return false;">Entre</a> para apostar</span></div>`;
+    betBar = `<div class="bet-bar"><span class="no-bet-msg"><a href="#" onclick="openUserModal();return false;">${t('login_to_bet_link')}</a> ${t('login_to_bet_suffix')}</span></div>`;
   } else {
     const hasBet = bet !== undefined;
     betBar = `<div class="bet-bar">
-      <span class="bet-label">Palpite:</span>
+      <span class="bet-label">${t('bet_label')}</span>
       <div class="bet-inputs">
         <input type="number" class="bet-score-input" id="bh-${m.id}" min="0" max="20"
           value="${hasBet ? bet.home_score : ''}" placeholder="0"
@@ -1169,8 +1169,8 @@ function renderMatchCard(m) {
 
   // "Ver palpites" toggle — visible whenever there are bets
   const toggleLabel = isPast
-    ? `${expandedBets.has(m.id) ? '▲' : '▼'} Ver palpites (${m.bet_count})`
-    : `👥 ${m.bet_count} apostaram`;
+    ? `${expandedBets.has(m.id) ? '▲' : '▼'} ${t('view_bets')} (${m.bet_count})`
+    : `👥 ${m.bet_count} ${t('bets_placed')}`;
   const showAllBetsToggle = m.bet_count > 0
     ? `<button class="all-bets-toggle" onclick="toggleAllBets(${m.id}, this, ${!isPast})">
         ${toggleLabel}
@@ -1224,30 +1224,30 @@ function renderMatchBetStats(bets) {
 
   return `<div class="bet-stats-box">
     <div class="bet-stats-row">
-      <span class="bsr-label">Tendência</span>
+      <span class="bsr-label">${t('bet_stats_trend')}</span>
       <div class="bsr-bar-wrap">
-        <div class="bsr-seg bsr-home" style="width:${pHome}%" title="Casa: ${pHome}%">${pHome > 12 ? pHome + '%' : ''}</div>
-        <div class="bsr-seg bsr-draw" style="width:${pDraw}%" title="Empate: ${pDraw}%">${pDraw > 12 ? pDraw + '%' : ''}</div>
-        <div class="bsr-seg bsr-away" style="width:${pAway}%" title="Visitante: ${pAway}%">${pAway > 12 ? pAway + '%' : ''}</div>
+        <div class="bsr-seg bsr-home" style="width:${pHome}%">${pHome > 12 ? pHome + '%' : ''}</div>
+        <div class="bsr-seg bsr-draw" style="width:${pDraw}%">${pDraw > 12 ? pDraw + '%' : ''}</div>
+        <div class="bsr-seg bsr-away" style="width:${pAway}%">${pAway > 12 ? pAway + '%' : ''}</div>
       </div>
       <div class="bsr-legend">
-        <span style="color:var(--green)">⬤ Casa ${pHome}%</span>
-        <span style="color:var(--text-3)">⬤ Emp ${pDraw}%</span>
-        <span style="color:var(--red)">⬤ Visit ${pAway}%</span>
+        <span style="color:var(--green)">⬤ ${t('bet_stats_home')} ${pHome}%</span>
+        <span style="color:var(--text-3)">⬤ ${t('bet_stats_draw')} ${pDraw}%</span>
+        <span style="color:var(--red)">⬤ ${t('bet_stats_away')} ${pAway}%</span>
       </div>
     </div>
     <div class="bet-stats-pills">
-      <div class="bsp-item"><span class="bsp-val">${avgHome} × ${avgAway}</span><span class="bsp-sub">média de gols</span></div>
-      <div class="bsp-item"><span class="bsp-val">${topScore[0]}</span><span class="bsp-sub">placar mais apostado (${topScore[1]}x)</span></div>
-      <div class="bsp-item"><span class="bsp-val">${bigGame.home_score} × ${bigGame.away_score}</span><span class="bsp-sub">maior goleada prevista</span></div>
+      <div class="bsp-item"><span class="bsp-val">${avgHome} × ${avgAway}</span><span class="bsp-sub">${t('bet_stats_avg_goals')}</span></div>
+      <div class="bsp-item"><span class="bsp-val">${topScore[0]}</span><span class="bsp-sub">${t('bet_stats_top_score')} (${topScore[1]}x)</span></div>
+      <div class="bsp-item"><span class="bsp-val">${bigGame.home_score} × ${bigGame.away_score}</span><span class="bsp-sub">${t('bet_stats_biggest')}</span></div>
     </div>
   </div>`;
 }
 
 function renderAllBets(matchId, hideScores) {
   const bets = matchBetsCache[matchId];
-  if (!bets) return '<div class="all-bets-list" style="color:var(--text-3);font-size:.8rem">Carregando...</div>';
-  if (!bets.length) return '<div class="all-bets-list" style="color:var(--text-3);font-size:.8rem">Nenhum palpite.</div>';
+  if (!bets) return `<div class="all-bets-list" style="color:var(--text-3);font-size:.8rem">${t('bets_loading')}</div>`;
+  if (!bets.length) return `<div class="all-bets-list" style="color:var(--text-3);font-size:.8rem">${t('bets_none')}</div>`;
   if (hideScores) {
     const names = bets.map(b => `<span class="feed-chip"><span class="fc-name">${b.user_name}</span></span>`).join('');
     return `<div class="all-bets-list">${names}</div>`;
@@ -1269,10 +1269,10 @@ async function toggleAllBets(matchId, btn, hideScores) {
   if (expandedBets.has(matchId)) {
     expandedBets.delete(matchId);
     document.getElementById(`all-bets-${matchId}`).style.display = 'none';
-    btn.innerHTML = hideScores ? `👥 ${count} apostaram` : `▼ Ver palpites (${count})`;
+    btn.innerHTML = hideScores ? `👥 ${count} ${t('bets_placed')}` : `▼ ${t('view_bets')} (${count})`;
   } else {
     expandedBets.add(matchId);
-    btn.innerHTML = hideScores ? `👥 ${count} apostaram` : `▲ Ver palpites (${count})`;
+    btn.innerHTML = hideScores ? `👥 ${count} ${t('bets_placed')}` : `▲ ${t('view_bets')} (${count})`;
     if (!matchBetsCache[matchId]) {
       const bets = await api(`/api/bets?match_id=${matchId}`);
       matchBetsCache[matchId] = bets || [];
@@ -1284,14 +1284,14 @@ async function toggleAllBets(matchId, btn, hideScores) {
 }
 
 async function saveBet(matchId) {
-  if (!currentUser) { toast('Selecione seu perfil primeiro', 'error'); return; }
+  if (!currentUser) { toast(t('toast_select_profile'), 'error'); return; }
   const hs  = parseInt(document.getElementById(`bh-${matchId}`).value);
   const as_ = parseInt(document.getElementById(`ba-${matchId}`).value);
-  if (isNaN(hs) || isNaN(as_) || hs < 0 || as_ < 0) { toast('Preencha os dois placares', 'error'); return; }
+  if (isNaN(hs) || isNaN(as_) || hs < 0 || as_ < 0) { toast(t('toast_fill_scores'), 'error'); return; }
   const result = await api('/api/bets', 'POST', { user_id: currentUser.id, match_id: matchId, home_score: hs, away_score: as_ });
   if (result.error) { toast(result.error, 'error'); return; }
   userBets[matchId] = result;
-  toast('Palpite salvo! ✓', 'success');
+  toast(t('toast_bet_saved'), 'success');
   renderMatches();
   loadLeaderboard();
 }
@@ -1330,7 +1330,7 @@ async function autoSaveBet(matchId) {
 
 async function confirmClearBets() {
   if (!currentUser) return;
-  if (!confirm('Apagar todos os seus palpites em jogos que ainda não começaram?\n\nEssa ação não pode ser desfeita.')) return;
+  if (!confirm(t('toast_clear_confirm'))) return;
   const result = await api('/api/bets', 'DELETE', { user_id: currentUser.id });
   if (result.error) { toast(result.error, 'error'); return; }
   const n = result.deleted;
@@ -1338,7 +1338,9 @@ async function confirmClearBets() {
     const m = allMatches.find(m => m.id === Number(id));
     if (m && m.status === 'upcoming' && new Date(m.match_date) > new Date()) delete userBets[id];
   });
-  toast(`${n} palpite${n !== 1 ? 's' : ''} apagado${n !== 1 ? 's' : ''}`, n > 0 ? 'success' : 'info');
+  toast(getCurrentLang() === 'en'
+    ? `${n} bet${n !== 1 ? 's' : ''} deleted`
+    : `${n} palpite${n !== 1 ? 's' : ''} apagado${n !== 1 ? 's' : ''}`, n > 0 ? 'success' : 'info');
   renderMatches();
   loadLeaderboard();
 }
@@ -1360,7 +1362,7 @@ async function randomizeBets() {
     now < new Date(m.match_date).getTime() - 5 * 60 * 1000 &&
     !userBets[m.id]
   );
-  if (!open.length) { toast('Sem jogos abertos sem palpite', 'info'); return; }
+  if (!open.length) { toast(t('toast_no_open'), 'info'); return; }
 
   // Fill inputs for visible matches and save all
   let saved = 0;
@@ -1375,7 +1377,9 @@ async function randomizeBets() {
     if (!result.error) { userBets[m.id] = result; saved++; }
   }
   _randomizing = false;
-  toast(`${saved} palpite${saved !== 1 ? 's' : ''} aleatório${saved !== 1 ? 's' : ''} salvo${saved !== 1 ? 's' : ''}! 🎲`, 'success');
+  toast(getCurrentLang() === 'en'
+    ? `${saved} random bet${saved !== 1 ? 's' : ''} saved! 🎲`
+    : `${saved} palpite${saved !== 1 ? 's' : ''} aleatório${saved !== 1 ? 's' : ''} salvo${saved !== 1 ? 's' : ''}! 🎲`, 'success');
   renderMatches();
   loadLeaderboard();
 }
@@ -1435,7 +1439,7 @@ function renderDetailedStats(stats, el) {
   const stageBars = stageEntries.map(([stage, v]) => {
     const fillPct = Math.round(v.pts / maxPts * 100);
     const acc = v.count > 0 ? Math.round(v.correct / v.count * 100) : 0;
-    const label = stage.replace('Fase de ','').replace(' de Final','').replace('Semifinal','Semi').replace('Terceiro Lugar','3º Lugar');
+    const label = tStageShort(stage);
     return `<div class="stage-bar-item">
       <div class="stage-bar-label" title="${stage}">${label}</div>
       <div class="stage-bar-track"><div class="stage-bar-fill" style="width:${fillPct}%"></div></div>
@@ -1450,53 +1454,53 @@ function renderDetailedStats(stats, el) {
   };
 
   const goalDiff = predGoals - realGoals;
-  const goalDiffLabel = goalDiff > 0.1 ? `+${goalDiff.toFixed(1)} acima` : goalDiff < -0.1 ? `${goalDiff.toFixed(1)} abaixo` : 'na média';
+  const goalDiffLabel = goalDiff > 0.1 ? `+${goalDiff.toFixed(1)} ${t('dstat_above_avg')}` : goalDiff < -0.1 ? `${goalDiff.toFixed(1)} ${t('dstat_below_avg')}` : t('dstat_on_avg');
 
   el.innerHTML = `
-    <div class="section-divider"><span>📊 Estatísticas Detalhadas</span></div>
+    <div class="section-divider"><span data-i18n="div_stats">${t('div_stats')}</span></div>
     <div class="dstats-grid">
       <div class="dstat-card">
-        <div class="dstat-title">🔥 Sequência atual</div>
+        <div class="dstat-title">${t('dstat_streak_title')}</div>
         <div class="dstat-val${currentStreak >= 3 ? ' hot' : ''}">${currentStreak}</div>
-        <div class="dstat-sub">melhor: ${bestStreak}</div>
+        <div class="dstat-sub">${t('dstat_streak_best')} ${bestStreak}</div>
       </div>
       <div class="dstat-card">
-        <div class="dstat-title">📈 Média de pontos</div>
+        <div class="dstat-title">${t('dstat_avg_title')}</div>
         <div class="dstat-val">${avgPts.toFixed(2)}</div>
-        <div class="dstat-sub">por jogo encerrado</div>
+        <div class="dstat-sub">${t('dstat_avg_sub')}</div>
       </div>
       <div class="dstat-card">
-        <div class="dstat-title">⚽ Gols previstos</div>
+        <div class="dstat-title">${t('dstat_goals_title')}</div>
         <div class="dstat-val">${predGoals.toFixed(1)}</div>
-        <div class="dstat-sub">real: ${realGoals.toFixed(1)} · ${goalDiffLabel}</div>
+        <div class="dstat-sub">${t('dstat_goals_real')} ${realGoals.toFixed(1)} · ${goalDiffLabel}</div>
       </div>
       <div class="dstat-card">
-        <div class="dstat-title">🎯 Jogos analisados</div>
+        <div class="dstat-title">${t('dstat_analyzed_title')}</div>
         <div class="dstat-val">${finishedCount}</div>
-        <div class="dstat-sub">com resultado</div>
+        <div class="dstat-sub">${t('dstat_analyzed_sub')}</div>
       </div>
     </div>
-    ${stageEntries.length ? `<div class="dstat-section-card"><div class="dstat-section-title">Pontos por fase</div><div class="stage-bars">${stageBars}</div></div>` : ''}
+    ${stageEntries.length ? `<div class="dstat-section-card"><div class="dstat-section-title">${t('dstat_by_stage')}</div><div class="stage-bars">${stageBars}</div></div>` : ''}
     ${total > 0 ? `
     <div class="dstat-section-card">
-      <div class="dstat-section-title">Estilo de apostas</div>
+      <div class="dstat-section-title">${t('dstat_style')}</div>
       <div class="bet-style-row">
         <div class="bet-style-item">
           <div class="bet-style-pct">${pct(homeWins)}%</div>
           <div class="bet-style-bar-wrap">${styleBar(homeWins, 'home')}</div>
-          <div class="bet-style-label">Casa</div>
+          <div class="bet-style-label">${t('dstat_home')}</div>
           <div class="bet-style-n">${homeWins}</div>
         </div>
         <div class="bet-style-item">
           <div class="bet-style-pct">${pct(draws)}%</div>
           <div class="bet-style-bar-wrap">${styleBar(draws, 'draw')}</div>
-          <div class="bet-style-label">Empate</div>
+          <div class="bet-style-label">${t('dstat_draw')}</div>
           <div class="bet-style-n">${draws}</div>
         </div>
         <div class="bet-style-item">
           <div class="bet-style-pct">${pct(awayWins)}%</div>
           <div class="bet-style-bar-wrap">${styleBar(awayWins, 'away')}</div>
-          <div class="bet-style-label">Visitante</div>
+          <div class="bet-style-label">${t('dstat_away')}</div>
           <div class="bet-style-n">${awayWins}</div>
         </div>
       </div>
@@ -1521,7 +1525,7 @@ function renderGroupAwards(awards) {
   if (divider) divider.classList.remove('hidden');
 
   const card = (emoji, title, award, valueFn, subFn) => {
-    if (!award) return `<div class="award-card award-empty"><div class="award-emoji">${emoji}</div><div class="award-title">${title}</div><div class="award-empty-msg">Sem dados ainda</div></div>`;
+    if (!award) return `<div class="award-card award-empty"><div class="award-emoji">${emoji}</div><div class="award-title">${title}</div><div class="award-empty-msg">${t('award_no_data')}</div></div>`;
     return `<div class="award-card" onclick="openPlayerModal(${award.id},'${award.name.replace(/'/g,"&#39;")}')" style="cursor:pointer">
       <div class="award-emoji">${emoji}</div>
       <div class="award-title">${title}</div>
@@ -1532,18 +1536,18 @@ function renderGroupAwards(awards) {
   };
 
   el.innerHTML = `<div class="awards-grid">
-    ${card('🎯','Rei do Placar Exato', awards.rei_exato,
-      a => `${a.exactScores} exato${a.exactScores!==1?'s':''}`,
-      a => `em ${a.finishedCount} jogos`)}
-    ${card('🔥','Maior Sequência', awards.maior_streak,
-      a => `${a.currentStreak || a.bestStreak} seguidos`,
-      a => a.currentStreak > 0 ? 'sequência ativa' : `melhor: ${a.bestStreak}`)}
-    ${card('💪','Mais Consistente', awards.mais_consistente,
-      a => `${Math.round(a.accuracy*100)}% de acerto`,
-      a => `mín. 5 jogos · ${a.finishedCount} analisados`)}
-    ${card('🤯','Maior Zebra', awards.maior_zebra,
-      a => `${a.upsets} zebra${a.upsets!==1?'s':''}`,
-      () => 'acertou vitórias visitantes')}
+    ${card('🎯', t('award_exact_king'), awards.rei_exato,
+      a => `${a.exactScores} ${getCurrentLang()==='en'?'exact':'exato'+( a.exactScores!==1?'s':'')}`,
+      a => `${getCurrentLang()==='en'?'in':'em'} ${a.finishedCount} ${getCurrentLang()==='en'?'games':'jogos'}`)}
+    ${card('🔥', t('award_streak'), awards.maior_streak,
+      a => `${a.currentStreak || a.bestStreak} ${getCurrentLang()==='en'?'in a row':'seguidos'}`,
+      a => a.currentStreak > 0 ? t('award_active_streak') : `${t('award_best_streak')} ${a.bestStreak}`)}
+    ${card('💪', t('award_consistent'), awards.mais_consistente,
+      a => `${Math.round(a.accuracy*100)}%`,
+      a => `${t('award_min_games')} ${a.finishedCount} ${t('award_analyzed')}`)}
+    ${card('🤯', t('award_upsets'), awards.maior_zebra,
+      a => `${a.upsets} ${getCurrentLang()==='en'?(a.upsets!==1?'upsets':'upset'):'zebra'+(a.upsets!==1?'s':'')}`,
+      () => t('award_upsets_sub'))}
   </div>`;
 }
 
@@ -1573,11 +1577,11 @@ async function loadMyPage() {
     <div class="me-avatar">${currentUser.name[0].toUpperCase()}</div>
     <div style="flex:1">
       <div class="me-name">${currentUser.name}</div>
-      <div style="color:var(--text-3);font-size:.8rem;margin-top:2px">${me.total_bets||0} palpites</div>
+      <div style="color:var(--text-3);font-size:.8rem;margin-top:2px">${me.total_bets||0} ${(me.total_bets||0)!==1?t('lb_bets_n'):t('lb_bets_1')}</div>
     </div>
     <div style="text-align:right">
       <div class="me-pts">${me.total_points||0}</div>
-      <div class="me-pts-label">pontos</div>
+      <div class="me-pts-label">${t('me_pts')}</div>
     </div>`;
 
   // Stats
@@ -1585,10 +1589,10 @@ async function loadMyPage() {
   const finished  = (bets||[]).filter(b => b.status === 'finished').length;
   const accuracy  = finished > 0 ? Math.round(((me.exact_scores||0) + (me.correct_results||0)) / finished * 100) : 0;
   document.getElementById('me-stats').innerHTML = `
-    <div class="me-stat-card"><div class="me-stat-val" style="color:var(--gold)">${me.total_points||0}</div><div class="me-stat-label">Pontos</div></div>
-    <div class="me-stat-card"><div class="me-stat-val" style="color:var(--green)">${me.exact_scores||0}</div><div class="me-stat-label">🎯 Exatos</div></div>
-    <div class="me-stat-card"><div class="me-stat-val" style="color:var(--blue)">${me.correct_results||0}</div><div class="me-stat-label">✅ Certos</div></div>
-    <div class="me-stat-card"><div class="me-stat-val">${accuracy}%</div><div class="me-stat-label">Acerto</div></div>`;
+    <div class="me-stat-card"><div class="me-stat-val" style="color:var(--gold)">${me.total_points||0}</div><div class="me-stat-label">${t('lb_col_pts')}</div></div>
+    <div class="me-stat-card"><div class="me-stat-val" style="color:var(--green)">${me.exact_scores||0}</div><div class="me-stat-label">${t('me_exact')}</div></div>
+    <div class="me-stat-card"><div class="me-stat-val" style="color:var(--blue)">${me.correct_results||0}</div><div class="me-stat-label">${t('me_results')}</div></div>
+    <div class="me-stat-card"><div class="me-stat-val">${accuracy}%</div><div class="me-stat-label">${t('me_accuracy')}</div></div>`;
 
   // Special bets section
   const champBet  = (special?.champion_bets  || []).find(b => b.user_id === currentUser.id);
@@ -1602,27 +1606,27 @@ async function loadMyPage() {
 
   document.getElementById('me-special').innerHTML = `
     <div class="special-card">
-      <div class="special-card-title">🏆 Meu palpite de campeão</div>
-      ${champResult ? (champWon ? '<div class="special-card-result">✓ Acertou! +10 pts</div>' : `<div class="special-card-closed">✗ Era ${champResult}</div>`) : ''}
+      <div class="special-card-title">${t('me_champ_title')}</div>
+      ${champResult ? (champWon ? `<div class="special-card-result">${t('me_correct', {pts:10})}</div>` : `<div class="special-card-closed">${t('me_wrong', {val:champResult})}</div>`) : ''}
       ${champBet
         ? `<div style="font-weight:700;margin-bottom:${isOpen&&!champResult?'8':'0'}px">${champBet.team}</div>`
-        : `<div style="color:var(--text-3);font-size:.85rem;margin-bottom:${isOpen?'8':'0'}px">Sem palpite</div>`}
+        : `<div style="color:var(--text-3);font-size:.85rem;margin-bottom:${isOpen?'8':'0'}px">${t('me_no_bet_placed')}</div>`}
       ${isOpen && !champResult ? `
         <div class="special-input-row">
           ${renderChampionPicker(champBet?.team||'')}
-          <button class="btn btn-primary btn-sm" onclick="saveMyChamp()">Salvar</button>
+          <button class="btn btn-primary btn-sm" onclick="saveMyChamp()">${getCurrentLang()==='en'?'Save':'Salvar'}</button>
         </div>` : ''}
     </div>
     <div class="special-card">
-      <div class="special-card-title">⚽ Meu palpite de artilheiro</div>
-      ${scorerResult ? (scorerWon ? '<div class="special-card-result">✓ Acertou! +5 pts</div>' : `<div class="special-card-closed">✗ Era ${scorerResult}</div>`) : ''}
+      <div class="special-card-title">${t('me_scorer_title')}</div>
+      ${scorerResult ? (scorerWon ? `<div class="special-card-result">${t('me_correct', {pts:5})}</div>` : `<div class="special-card-closed">${t('me_wrong', {val:scorerResult})}</div>`) : ''}
       ${scorerBet
         ? `<div style="font-weight:700;margin-bottom:${isOpen&&!scorerResult?'8':'0'}px">${scorerBet.name}</div>`
-        : `<div style="color:var(--text-3);font-size:.85rem;margin-bottom:${isOpen?'8':'0'}px">Sem palpite</div>`}
+        : `<div style="color:var(--text-3);font-size:.85rem;margin-bottom:${isOpen?'8':'0'}px">${t('me_no_bet_placed')}</div>`}
       ${isOpen && !scorerResult ? `
         <div class="special-input-row">
-          <input type="text" class="input" id="my-scorer-input" placeholder="Nome do jogador" value="${scorerBet?.name||''}">
-          <button class="btn btn-primary btn-sm" onclick="saveMyScorer()">Salvar</button>
+          <input type="text" class="input" id="my-scorer-input" placeholder="${t('me_scorer_placeholder')}" value="${scorerBet?.name||''}">
+          <button class="btn btn-primary btn-sm" onclick="saveMyScorer()">${getCurrentLang()==='en'?'Save':'Salvar'}</button>
         </div>` : ''}
     </div>`;
 
@@ -1647,20 +1651,20 @@ async function loadMyPage() {
         <div class="me-bet-match">${match?.home_team||'?'} × ${match?.away_team||'?'}</div>
         <div class="me-bet-date">${match ? fmtDate(match.match_date) : ''} · ${match?.stage||''}</div>
       </div>
-      <div class="me-bet-score">Palpite: <span class="me-bet-result-score">${b.home_score}×${b.away_score}</span></div>
-      ${finished && match ? `<div class="me-bet-score">Placar: <span class="me-bet-result-score">${match.home_score}×${match.away_score}</span></div>` : ''}
+      <div class="me-bet-score">${t('me_bet_label')} <span class="me-bet-result-score">${b.home_score}×${b.away_score}</span></div>
+      ${finished && match ? `<div class="me-bet-score">${t('me_score_label')} <span class="me-bet-result-score">${match.home_score}×${match.away_score}</span></div>` : ''}
       <span class="pts-chip ${chipClass}">${chipLabel}</span>
     </div>`;
-  }).join('') : '<div class="empty" style="padding:24px 0"><span class="icon">🎲</span>Nenhum palpite ainda.</div>';
+  }).join('') : `<div class="empty" style="padding:24px 0"><span class="icon">🎲</span>${t('me_no_bets')}</div>`;
 }
 
 async function saveMyChamp() {
   if (!currentUser) return;
   const team = _champPickerSelected;
-  if (!team) { toast('Escolha um time', 'error'); return; }
+  if (!team) { toast(t('toast_choose_team'), 'error'); return; }
   const res = await api('/api/champion-bet', 'POST', { user_id: currentUser.id, team });
   if (res.error) { toast(res.error, 'error'); return; }
-  toast('Palpite de campeão salvo! 🏆', 'success');
+  toast(t('toast_champ_saved'), 'success');
   loadMyPage();
   loadSpecialAndFeed();
 }
@@ -1668,10 +1672,10 @@ async function saveMyChamp() {
 async function saveMyScorer() {
   if (!currentUser) return;
   const name = document.getElementById('my-scorer-input')?.value.trim();
-  if (!name) { toast('Informe o jogador', 'error'); return; }
+  if (!name) { toast(t('toast_fill_player'), 'error'); return; }
   const res = await api('/api/scorer-bet', 'POST', { user_id: currentUser.id, name });
   if (res.error) { toast(res.error, 'error'); return; }
-  toast('Palpite de artilheiro salvo! ⚽', 'success');
+  toast(t('toast_scorer_saved'), 'success');
   loadMyPage();
   loadSpecialAndFeed();
 }
@@ -2000,7 +2004,20 @@ async function adminSaveEdit() {
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 function fmtDate(str) {
-  return new Date(str).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', timeZone:'Europe/Berlin' });
+  return new Date(str).toLocaleDateString(dateLocale(), { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', timeZone:'Europe/Berlin' });
+}
+
+/* ─── Language switcher ──────────────────────────────────────────────────── */
+async function setLang(lang) {
+  setCurrentLang(lang);
+  // Re-render dynamic content (data already cached in allMatches/userBets)
+  buildStagePills();
+  renderMatches();
+  const activePaneId = document.querySelector('.tab-pane:not(.hidden)')?.id;
+  if (activePaneId === 'tab-leaderboard') { loadLeaderboard(); loadSpecialAndFeed(); }
+  else if (activePaneId === 'tab-bracket') renderBracketTab();
+  else if (activePaneId === 'tab-me') loadMyPage();
+  else if (activePaneId === 'tab-matches') { /* already rebuilt above */ }
 }
 
 function toast(msg, type = 'info') {

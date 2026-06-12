@@ -88,6 +88,18 @@ header {
 .user-btn:hover { background: rgba(255,255,255,.25); color: #fff; }
 .user-btn.logged-in { background: rgba(255,214,0,.2); border-color: #FFD600; color: #FFD600; }
 
+.header-right { display: flex; align-items: center; gap: 8px; }
+
+.lang-pills { display: flex; gap: 3px; }
+.lang-pill {
+  background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2);
+  color: rgba(255,255,255,.6); padding: 4px 10px; border-radius: 999px;
+  font-family: inherit; font-size: .72rem; font-weight: 700;
+  cursor: pointer; transition: all .18s; letter-spacing: .04em;
+}
+.lang-pill.active { background: rgba(255,214,0,.2); border-color: #FFD600; color: #FFD600; }
+.lang-pill:hover:not(.active) { background: rgba(255,255,255,.2); color: #fff; }
+
 /* ─── Tab bar ────────────────────────────────────────────────────────────── */
 .tab-bar {
   max-width: 860px; margin: 0 auto; padding: 0 20px;
