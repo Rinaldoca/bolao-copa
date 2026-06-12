@@ -96,6 +96,7 @@ function createMatch({ home_team, away_team, match_date, stage, group_name, venu
 function replaceGroupStage(newMatches) {
   const db = load();
   const oldIds = new Set(db.matches.filter(m => m.stage === 'Fase de Grupos').map(m => m.id));
+  const deletedBets = db.bets.filter(b => oldIds.has(b.match_id)).length;
   db.matches = db.matches.filter(m => m.stage !== 'Fase de Grupos');
   db.bets    = db.bets.filter(b => !oldIds.has(b.match_id));
   db.feed    = db.feed.filter(f => !oldIds.has(f.match_id));
@@ -115,6 +116,7 @@ function replaceGroupStage(newMatches) {
     });
   }
   persist();
+  return deletedBets;
 }
 
 function editMatch(id, { home_team, away_team, match_date, stage, group_name, venue }) {
@@ -275,7 +277,7 @@ function clearUserBets(user_id) {
   const LOCK_MS = 5 * 60 * 1000;
   const deletable = new Set(
     db.matches
-      .filter(m => m.status === 'upcoming' && new Date(m.match_date) - LOCK_MS > now)
+      .filter(m => m.status === 'upcoming' && new Date(m.match_date) - LOCK_MS >= now)
       .map(m => m.id)
   );
   const before = db.bets.length;
@@ -320,7 +322,7 @@ function upsertScorerBet(user_id, name) {
 
 function setChampion(team) {
   const db = load();
-  db.settings.champion = team;
+  db.settings.champion = team.trim();
   // Award 10 pts in feed
   const winners = db.champion_bets.filter(b => b.team.toLowerCase() === team.toLowerCase());
   db.feed.unshift({
@@ -341,7 +343,7 @@ function setChampion(team) {
 
 function setTopScorer(name) {
   const db = load();
-  db.settings.top_scorer = name;
+  db.settings.top_scorer = name.trim();
   db.feed.unshift({
     id:        ++db._seq.feed,
     type:      'scorer_result',

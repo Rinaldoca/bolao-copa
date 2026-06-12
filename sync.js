@@ -210,9 +210,9 @@ async function importGroupStage() {
     venue:        m.venue || null,
   })).filter(m => m.home_team && m.away_team);
 
-  db.replaceGroupStage(mapped);
-  console.log(`[import] Replaced group stage with ${mapped.length} matches from API`);
-  return { ok: true, imported: mapped.length };
+  const deletedBets = db.replaceGroupStage(mapped);
+  console.log(`[import] Replaced group stage with ${mapped.length} matches, deleted ${deletedBets} bets`);
+  return { ok: true, imported: mapped.length, deleted_bets: deletedBets };
 }
 
 // ── Import knockout stage ─────────────────────────────────────────────────────

@@ -141,9 +141,13 @@ async function api(url, method = 'GET', body = null) {
     const opts = { method, headers: { 'Content-Type': 'application/json' } };
     if (body) opts.body = JSON.stringify(body);
     const res = await fetch(url, opts);
-    return await res.json();
+    try {
+      return await res.json();
+    } catch {
+      return { error: `Erro HTTP ${res.status}` };
+    }
   } catch (err) {
-    toast('Erro de conexão', 'error');
+    toast('Erro de conexão — verifique sua internet', 'error');
     return { error: err.message };
   }
 }
@@ -1224,7 +1228,7 @@ function renderAllBets(matchId, hideScores) {
   if (!bets.length) return '<div class="all-bets-list" style="color:var(--text-3);font-size:.8rem">Nenhum palpite.</div>';
   if (hideScores) {
     const names = bets.map(b => `<span class="feed-chip"><span class="fc-name">${b.user_name}</span></span>`).join('');
-    return renderMatchBetStats(bets) + `<div class="all-bets-list">${names}</div>`;
+    return `<div class="all-bets-list">${names}</div>`;
   }
   const chips = bets.map(b => {
     const cls = b.points === 3 ? 'pts-3' : b.points === 1 ? 'pts-1' : b.points === 0 && b.status === 'finished' ? 'pts-0' : '';
@@ -1270,8 +1274,11 @@ async function saveBet(matchId) {
   loadLeaderboard();
 }
 
+const _savingBets = new Set();
+
 async function autoSaveBet(matchId) {
   if (!currentUser) return;
+  if (_savingBets.has(matchId)) return;
   const hInput = document.getElementById(`bh-${matchId}`);
   const aInput = document.getElementById(`ba-${matchId}`);
   if (!hInput || !aInput) return;
@@ -1281,10 +1288,13 @@ async function autoSaveBet(matchId) {
   const isNew = !userBets[matchId];
   const statusEl = document.getElementById(`abs-${matchId}`);
   if (statusEl) { statusEl.textContent = '…'; statusEl.className = 'auto-bet-status saving'; }
+  _savingBets.add(matchId);
   const result = await api('/api/bets', 'POST', { user_id: currentUser.id, match_id: matchId, home_score: hs, away_score: as_ });
+  _savingBets.delete(matchId);
   if (result.error) {
     if (statusEl) { statusEl.textContent = '✗'; statusEl.className = 'auto-bet-status error'; }
     toast(result.error, 'error');
+    if (result.error.includes('encerrad') || result.error.includes('encerrado')) loadMatches();
     return;
   }
   userBets[matchId] = result;
@@ -1317,8 +1327,11 @@ function randScore() {
   return goals[Math.floor(Math.random() * goals.length)];
 }
 
+let _randomizing = false;
 async function randomizeBets() {
   if (!currentUser) { toast('Selecione seu perfil primeiro', 'error'); return; }
+  if (_randomizing) return;
+  _randomizing = true;
   const now = Date.now();
   const open = allMatches.filter(m =>
     m.status === 'upcoming' &&
@@ -1339,6 +1352,7 @@ async function randomizeBets() {
     const result = await api('/api/bets', 'POST', { user_id: currentUser.id, match_id: m.id, home_score: hs, away_score: as_ });
     if (!result.error) { userBets[m.id] = result; saved++; }
   }
+  _randomizing = false;
   toast(`${saved} palpite${saved !== 1 ? 's' : ''} aleatório${saved !== 1 ? 's' : ''} salvo${saved !== 1 ? 's' : ''}! 🎲`, 'success');
   renderMatches();
   loadLeaderboard();
@@ -1865,7 +1879,8 @@ async function adminImportMatches() {
   btn.textContent = '📥 Importar partidas da API';
 
   if (res.error || !res.ok) { toast(res.error || 'Erro ao importar', 'error'); return; }
-  toast(`${res.imported} partidas importadas com sucesso!`, 'success');
+  const delMsg = res.deleted_bets > 0 ? ` (${res.deleted_bets} palpites apagados)` : '';
+  toast(`${res.imported} partidas importadas com sucesso!${delMsg}`, 'success');
   matchBetsCache = {}; expandedBets.clear(); allMatches = [];
   loadAdminMatches();
   loadMatches();
