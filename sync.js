@@ -127,11 +127,20 @@ async function syncMatches() {
     return result;
   }
 
-  // Unique dates to fetch from ESPN
-  const dates = [...new Set(pending.map(m => isoDay(m.match_date)))];
+  // Unique dates to fetch from ESPN — also include the day before each date
+  // because ESPN groups matches by US Eastern time, so a UTC early-morning match
+  // (e.g. 02:00 UTC) appears under the previous calendar day on ESPN.
+  const utcDates = [...new Set(pending.map(m => isoDay(m.match_date)))];
+  const datesToFetch = new Set();
+  for (const d of utcDates) {
+    datesToFetch.add(d);
+    const prev = new Date(d);
+    prev.setDate(prev.getDate() - 1);
+    datesToFetch.add(prev.toISOString().slice(0, 10));
+  }
 
   const espnLookup = {};
-  for (const date of dates) {
+  for (const date of datesToFetch) {
     try {
       const data = await fetchEspn(`${ESPN_SCOREBOARD}?dates=${date.replace(/-/g, '')}`);
       for (const event of data.events || []) {
