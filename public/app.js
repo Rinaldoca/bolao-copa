@@ -1167,16 +1167,14 @@ function renderMatchCard(m) {
     </div>`;
   }
 
-  // "Ver palpites" toggle — visible whenever there are bets
-  const toggleLabel = isPast
-    ? `${expandedBets.has(m.id) ? '▲' : '▼'} ${t('view_bets')} (${m.bet_count})`
-    : `👥 ${m.bet_count} ${t('bets_placed')}`;
+  // "Ver palpites" toggle — always shows scores regardless of bet window
+  const toggleLabel = `${expandedBets.has(m.id) ? '▲' : '▼'} ${t('view_bets')} (${m.bet_count})`;
   const showAllBetsToggle = m.bet_count > 0
-    ? `<button class="all-bets-toggle" onclick="toggleAllBets(${m.id}, this, ${!isPast})">
+    ? `<button class="all-bets-toggle" onclick="toggleAllBets(${m.id}, this, false)">
         ${toggleLabel}
        </button>
        <div class="all-bets-section" id="all-bets-${m.id}" ${expandedBets.has(m.id)?'':'style="display:none"'}>
-         ${renderAllBets(m.id, !isPast)}
+         ${renderAllBets(m.id, false)}
        </div>`
     : '';
 
@@ -1269,10 +1267,10 @@ async function toggleAllBets(matchId, btn, hideScores) {
   if (expandedBets.has(matchId)) {
     expandedBets.delete(matchId);
     document.getElementById(`all-bets-${matchId}`).style.display = 'none';
-    btn.innerHTML = hideScores ? `👥 ${count} ${t('bets_placed')}` : `▼ ${t('view_bets')} (${count})`;
+    btn.innerHTML = `▼ ${t('view_bets')} (${count})`;
   } else {
     expandedBets.add(matchId);
-    btn.innerHTML = hideScores ? `👥 ${count} ${t('bets_placed')}` : `▲ ${t('view_bets')} (${count})`;
+    btn.innerHTML = `▲ ${t('view_bets')} (${count})`;
     if (!matchBetsCache[matchId]) {
       const bets = await api(`/api/bets?match_id=${matchId}`);
       matchBetsCache[matchId] = bets || [];
