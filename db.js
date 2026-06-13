@@ -555,7 +555,7 @@ function getGroupAwards() {
 
     const exactScores = finished.filter(b => b.points === 3).length;
     const correct     = finished.filter(b => b.points > 0).length;
-    const accuracy    = finished.length >= 5 ? correct / finished.length : -1;
+    const accuracy    = finished.length >= 3 ? correct / finished.length : -1;
 
     // Zebra: correctly predicted an away win (both predicted AND actual away_score > home_score)
     const upsets = finished.filter(b => {
