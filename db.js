@@ -399,24 +399,51 @@ function getFeed() { return load().feed.slice(0, 20); }
 
 function getPointsHistory() {
   const db = load();
+  const champion  = db.settings.champion;
+  const topScorer = db.settings.top_scorer;
+
   const finished = db.matches
     .filter(m => m.status === 'finished')
     .slice()
     .sort((a, b) => a.match_date.localeCompare(b.match_date));
   const cumulative = {};
   db.users.forEach(u => { cumulative[u.id] = 0; });
-  return finished.map(m => {
+
+  const result = finished.map(m => {
     db.bets.filter(b => b.match_id === m.id).forEach(b => {
       if (cumulative[b.user_id] !== undefined) cumulative[b.user_id] += b.points;
     });
     const matchDay = m.match_date.slice(0, 10);
-    // Only include users who had joined by this match's date
     const activeUsers = db.users.filter(u => !u.created_at || u.created_at.slice(0, 10) <= matchDay);
     return {
       label: `${m.home_team.split(' ')[0]} × ${m.away_team.split(' ')[0]}`,
       snapshot: activeUsers.map(u => ({ id: u.id, name: u.name, pts: cumulative[u.id] || 0 })),
     };
   });
+
+  // Add special-bet bonuses as a final snapshot so the chart end matches the leaderboard
+  if (result.length > 0 && (champion || topScorer)) {
+    const specialCumulative = { ...cumulative };
+    let hasBonus = false;
+    db.users.forEach(u => {
+      const champBet  = db.champion_bets.find(b => b.user_id === u.id);
+      const scorerBet = db.scorer_bets.find(b => b.user_id === u.id);
+      const champPts  = champion  && champBet  && champBet.team.toLowerCase()  === champion.toLowerCase()  ? 10 : 0;
+      const scorerPts = topScorer && scorerBet && scorerBet.name.toLowerCase() === topScorer.toLowerCase() ? 5  : 0;
+      if (champPts + scorerPts > 0) {
+        specialCumulative[u.id] = (specialCumulative[u.id] || 0) + champPts + scorerPts;
+        hasBonus = true;
+      }
+    });
+    if (hasBonus) {
+      result.push({
+        label: '🏆 Especiais',
+        snapshot: db.users.map(u => ({ id: u.id, name: u.name, pts: specialCumulative[u.id] || 0 })),
+      });
+    }
+  }
+
+  return result;
 }
 
 // ── Leaderboard ───────────────────────────────────────────────────────────────
