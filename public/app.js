@@ -1543,9 +1543,9 @@ function renderGroupAwards(awards) {
     ${card('💪', t('award_consistent'), awards.mais_consistente,
       a => `${Math.round(a.accuracy*100)}%`,
       a => `${t('award_min_games')} ${a.finishedCount} ${t('award_analyzed')}`)}
-    ${card('🤯', t('award_upsets'), awards.maior_zebra,
-      a => `${a.upsets} ${getCurrentLang()==='en'?(a.upsets!==1?'upsets':'upset'):'zebra'+(a.upsets!==1?'s':'')}`,
-      () => t('award_upsets_sub'))}
+    ${card('📉', t('award_bad_run'), awards.pior_fase,
+      a => `${a._neg} ${getCurrentLang()==='en'?(a._neg!==1?'misses':'miss'):'erro'+(a._neg!==1?'s':'')} ${getCurrentLang()==='en'?'in a row':'seguidos'}`,
+      a => a.negStreak > 0 ? t('award_bad_run_active') : t('award_bad_run_worst'))}
   </div>`;
 }
 

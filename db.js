@@ -557,13 +557,20 @@ function getGroupAwards() {
     const correct     = finished.filter(b => b.points > 0).length;
     const accuracy    = finished.length >= 3 ? correct / finished.length : -1;
 
-    // Zebra: correctly predicted an away win (both predicted AND actual away_score > home_score)
-    const upsets = finished.filter(b => {
-      const m = matchMap[b.match_id];
-      return m && m.away_score > m.home_score && b.away_score > b.home_score && b.points > 0;
-    }).length;
+    // Current miss streak (consecutive 0-point bets from most recent backwards)
+    let negStreak = 0;
+    for (let i = finished.length - 1; i >= 0; i--) {
+      if (finished[i].points === 0) negStreak++;
+      else break;
+    }
+    // Worst miss streak ever (for tiebreaking)
+    let worstNegStreak = 0, negTemp = 0;
+    for (const b of finished) {
+      if (b.points === 0) { negTemp++; worstNegStreak = Math.max(worstNegStreak, negTemp); }
+      else negTemp = 0;
+    }
 
-    return { id: u.id, name: u.name, exactScores, currentStreak, bestStreak, accuracy, finishedCount: finished.length, upsets };
+    return { id: u.id, name: u.name, exactScores, currentStreak, bestStreak, accuracy, finishedCount: finished.length, negStreak, worstNegStreak };
   }).filter(Boolean);
 
   if (!stats.length) return null;
@@ -580,7 +587,8 @@ function getGroupAwards() {
       const eligible = stats.filter(s => s.accuracy >= 0).sort((a, b) => b.accuracy - a.accuracy);
       return eligible[0]?.accuracy > 0 ? eligible[0] : null;
     })(),
-    maior_zebra:      top(stats, 'upsets'),
+    pior_fase:        top(stats.filter(s => s.negStreak > 0).map(s => ({ ...s, _neg: s.negStreak })), '_neg') ||
+                      top(stats.filter(s => s.worstNegStreak > 0).map(s => ({ ...s, _neg: s.worstNegStreak })), '_neg'),
   };
 }
 
