@@ -183,6 +183,20 @@ const LANG_DATA = {
     special_no_bets: 'Nenhum palpite ainda.',
     special_champion: '🏆 Campeão',
     special_scorer: '⚽ Artilheiro',
+    special_your_pick: 'Seu palpite',
+    special_not_placed: 'Você ainda não apostou.',
+    special_change: 'Alterar em Minha Página',
+    special_place_bet: 'Apostar agora',
+    special_bet_count: 'já apostaram (revelado quando fechar)',
+
+    // Share
+    share_lb: 'Compartilhar classificação',
+    share_copied: '📋 Classificação copiada!',
+
+    // Team stats
+    team_stats_title: '🗺 Desempenho por Time',
+    team_stats_best: 'Melhores acertos',
+    team_stats_worst: 'Piores acertos',
 
     // Feed
     feed_empty: 'Nenhum resultado registrado ainda.',
@@ -442,6 +456,20 @@ const LANG_DATA = {
     special_no_bets: 'No picks yet.',
     special_champion: '🏆 Champion',
     special_scorer: '⚽ Top scorer',
+    special_your_pick: 'Your pick',
+    special_not_placed: "You haven't placed your pick yet.",
+    special_change: 'Change in My Page',
+    special_place_bet: 'Place your pick',
+    special_bet_count: 'have picked (revealed when bets close)',
+
+    // Share
+    share_lb: 'Share standings',
+    share_copied: '📋 Standings copied!',
+
+    // Team stats
+    team_stats_title: '🗺 Performance by Team',
+    team_stats_best: 'Best accuracy',
+    team_stats_worst: 'Worst accuracy',
 
     // Feed
     feed_empty: 'No results registered yet.',

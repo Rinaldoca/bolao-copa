@@ -396,12 +396,86 @@ async function loadLeaderboard() {
           <div class="lb-stat">${p.exact_scores}</div>
           <div class="lb-stat">${p.correct_results}</div>
         </div>`).join('')}
+    </div>
+    <div style="text-align:center;margin-top:10px">
+      <button class="btn btn-ghost btn-sm" onclick="shareLeaderboard()" style="font-size:.78rem">📋 ${t('share_lb')}</button>
     </div>`;
 }
 
 function setLbStage(stage) {
   lbStageFilter = stage;
   loadLeaderboard();
+}
+
+async function shareLeaderboard() {
+  const data = await api('/api/leaderboard' + (lbStageFilter ? '?stage=' + encodeURIComponent(lbStageFilter) : ''));
+  if (!data?.length) return;
+  const stageLabel = lbStageFilter ? ` (${tStage(lbStageFilter)})` : '';
+  const header = getCurrentLang() === 'en'
+    ? `🏆 Pool Standings${stageLabel}\n`
+    : `🏆 Bolão - Classificação${stageLabel}\n`;
+  const rows = data.map((p, i) => {
+    const rank = ['🥇','🥈','🥉'][i] || `${i+1}º`;
+    return `${rank} ${p.name} — ${p.total_points}pts (🎯${p.exact_scores} ✅${p.correct_results})`;
+  }).join('\n');
+  try {
+    await navigator.clipboard.writeText(header + rows);
+    toast(t('share_copied'), 'success');
+  } catch {
+    toast(header + rows, 'info');
+  }
+}
+
+function renderTeamStats(bets, matchMap, el) {
+  if (!el) return;
+  const finished = bets.filter(b => matchMap[b.match_id]?.status === 'finished');
+  if (finished.length < 3) { el.innerHTML = ''; return; }
+
+  const teamMap = {};
+  finished.forEach(b => {
+    const m = matchMap[b.match_id];
+    if (!m) return;
+    [m.home_team, m.away_team].forEach(team => {
+      if (!teamMap[team]) teamMap[team] = { team, games: 0, correct: 0, exact: 0 };
+      teamMap[team].games++;
+      if (b.points > 0) teamMap[team].correct++;
+      if (b.points === 3) teamMap[team].exact++;
+    });
+  });
+
+  const stats = Object.values(teamMap)
+    .filter(s => s.games >= 2)
+    .map(s => ({ ...s, acc: s.correct / s.games }))
+    .sort((a, b) => b.acc - a.acc);
+
+  if (!stats.length) { el.innerHTML = ''; return; }
+
+  const best  = stats.slice(0, 3);
+  const worst = [...stats].reverse().slice(0, 3);
+
+  const row = s => {
+    const pct = Math.round(s.acc * 100);
+    return `<div class="team-stat-row">
+      <span class="team-stat-flag">${_flagMap[s.team]||''}</span>
+      <span class="team-stat-name">${s.team}</span>
+      <div class="team-stat-bar-wrap"><div class="team-stat-bar-fill" style="width:${pct}%"></div></div>
+      <span class="team-stat-pct">${pct}%</span>
+    </div>`;
+  };
+
+  const showWorst = worst[0]?.team !== best[best.length-1]?.team;
+  el.innerHTML = `
+    <div class="section-divider"><span>${t('team_stats_title')}</span></div>
+    <div class="team-stats-grid">
+      <div>
+        <div class="team-stats-label">✅ ${t('team_stats_best')}</div>
+        ${best.map(row).join('')}
+      </div>
+      ${showWorst ? `<div>
+        <div class="team-stats-label">❌ ${t('team_stats_worst')}</div>
+        ${worst.map(row).join('')}
+      </div>` : ''}
+    </div>`;
 }
 
 /* ─── Bracket tab ───────────────────────────────────────────────────────── */
@@ -765,6 +839,19 @@ function renderHistoryChart(history) {
   }
   const labelY = Object.fromEntries(endLabelInfo.map(el => [el.id, el.rawY]));
 
+  // Average rank line (dashed, background)
+  const avgRanks = series.map(s => {
+    const vals = Object.values(s);
+    if (!vals.length) return (N + 1) / 2;
+    const avg   = vals.reduce((a, b) => a + b, 0) / vals.length;
+    const above = vals.filter(v => v > avg).length;
+    const tied  = vals.filter(v => v === avg).length;
+    return above + 1 + (tied > 0 ? (tied - 1) / 2 : 0);
+  });
+  const avgD = avgRanks.map((r, i) => `${i===0?'M':'L'}${xScale(i).toFixed(1)},${yScale(r).toFixed(1)}`).join(' ');
+  const avgLineEl = `<path d="${avgD}" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1.5" stroke-dasharray="4,3" stroke-linejoin="round"/>
+    <text x="${xScale(series.length-1)+6}" y="${yScale(avgRanks[avgRanks.length-1])+4}" font-size="9" fill="rgba(255,255,255,0.28)">${getCurrentLang()==='en'?'avg':'média'}</text>`;
+
   // Lines & dots per user
   const lines = userIds.map((id, ci) => {
     const color = COLORS[ci % COLORS.length];
@@ -792,6 +879,7 @@ function renderHistoryChart(history) {
       ${gridLines}
       ${yLabels}
       ${xLabels}
+      ${avgLineEl}
       ${lines}
     </svg>
   </div>`;
@@ -801,45 +889,66 @@ function renderSpecialGrid(special, containerId) {
   const wrap = document.getElementById(containerId);
   if (!wrap) return;
 
-  const champOpen   = special?.special_bets_open;
-  const champResult = special?.champion;
-  const scorerResult= special?.top_scorer;
-  const champBets   = special?.champion_bets || [];
-  const scorerBets  = special?.scorer_bets   || [];
+  const champOpen    = special?.special_bets_open;
+  const champResult  = special?.champion;
+  const scorerResult = special?.top_scorer;
+  const champBets    = special?.champion_bets || [];
+  const scorerBets   = special?.scorer_bets   || [];
+  const getChampVal  = b => b.team;
+  const getScorerVal = b => b.name;
 
   const statusBadge = champOpen
     ? `<span class="special-card-open">${t('special_open')}</span>`
     : `<span class="special-card-closed">${t('special_closed')}</span>`;
 
-  const renderRows = (bets, resultVal, getVal) =>
+  const renderRows = (bets, resultVal, getVal, pts) =>
     bets.length === 0
       ? `<p style="color:var(--text-3);font-size:.8rem;padding:8px 0">${t('special_no_bets')}</p>`
       : bets.map(b => {
           const val = getVal(b);
-          const won = resultVal && val.toLowerCase() === resultVal.toLowerCase();
+          const won = resultVal && val?.toLowerCase() === resultVal.toLowerCase();
           return `<div class="special-bet-row">
             <div><span class="special-user">${b.user_name}</span><br><span class="special-pick">${val}</span></div>
             <div class="special-pts ${won ? 'won' : resultVal ? 'lost' : ''}">
-              ${won ? '✓ +' + (getVal===getChampVal?10:5)+' pts' : resultVal ? '—' : ''}
+              ${won ? `✓ +${pts}pts` : resultVal ? '—' : ''}
             </div>
           </div>`;
         }).join('');
 
-  const getChampVal  = b => b.team;
-  const getScorerVal = b => b.name;
+  // When bets are open: show own pick or CTA (no peeking at others)
+  const myPickBlock = (myBet, getVal, resultVal) => {
+    if (!currentUser) return `<div class="special-cta"><a href="#" onclick="openUserModal();return false;" class="btn btn-ghost btn-sm">${t('login_to_bet_link')}</a></div>`;
+    const val = myBet ? getVal(myBet) : null;
+    const won = resultVal && val?.toLowerCase() === resultVal.toLowerCase();
+    if (val) return `<div class="special-my-pick">
+      <div class="smp-label">${t('special_your_pick')}</div>
+      <div class="smp-val">${val}${won ? ' ✓' : ''}</div>
+      ${!resultVal ? `<button class="btn btn-ghost btn-sm smp-change" onclick="showTab('me')">${t('special_change')}</button>` : ''}
+    </div>`;
+    return `<div class="special-cta">
+      <div style="color:var(--text-3);font-size:.82rem;margin-bottom:8px">${t('special_not_placed')}</div>
+      <button class="btn btn-primary btn-sm" onclick="showTab('me')">${t('special_place_bet')}</button>
+    </div>`;
+  };
+
+  const myChampBet  = currentUser ? champBets.find(b => b.user_id === currentUser.id) : null;
+  const myScorerBet = currentUser ? scorerBets.find(b => b.user_id === currentUser.id) : null;
+
+  const champBody  = champOpen  ? myPickBlock(myChampBet,  getChampVal,  champResult)  + (champBets.length  ? `<p class="special-count">${champBets.length} ${t('special_bet_count')}</p>`  : '') : renderRows(champBets,  champResult,  getChampVal,  10);
+  const scorerBody = champOpen  ? myPickBlock(myScorerBet, getScorerVal, scorerResult) + (scorerBets.length ? `<p class="special-count">${scorerBets.length} ${t('special_bet_count')}</p>` : '') : renderRows(scorerBets, scorerResult, getScorerVal, 5);
 
   wrap.innerHTML = `
     <div class="special-card">
       <div class="special-card-title">${t('special_champion')}</div>
       ${statusBadge}
       ${champResult ? `<div class="special-card-result">✓ ${champResult}</div>` : ''}
-      ${renderRows(champBets, champResult, getChampVal)}
+      ${champBody}
     </div>
     <div class="special-card">
       <div class="special-card-title">${t('special_scorer')}</div>
       ${statusBadge}
       ${scorerResult ? `<div class="special-card-result">✓ ${scorerResult}</div>` : ''}
-      ${renderRows(scorerBets, scorerResult, getScorerVal)}
+      ${scorerBody}
     </div>`;
 }
 
@@ -850,11 +959,19 @@ function renderFeed(feed) {
     wrap.innerHTML = `<p class="feed-empty">${t('feed_empty')}</p>`;
     return;
   }
+  const matchLookup = Object.fromEntries(allMatches.map(m => [m.id, m]));
   wrap.innerHTML = feed.map(entry => {
     if (entry.type === 'match_result') {
+      const match   = matchLookup[entry.match_id];
+      const hFlag   = _flagMap[entry.home_team] || '';
+      const aFlag   = _flagMap[entry.away_team] || '';
+      const exact   = entry.results.filter(r => r.points === 3).length;
+      const correct = entry.results.filter(r => r.points === 1).length;
+      const missed  = entry.results.filter(r => r.points === 0).length;
+      const summary = [exact?`🎯 ${exact}`:'', correct?`✅ ${correct}`:'', missed?`❌ ${missed}`:''].filter(Boolean).join(' · ');
       const chips = entry.results.map(r => {
-        const cls = r.points === 3 ? 'pts-3' : r.points === 1 ? 'pts-1' : 'pts-0';
-        const emoji = r.points === 3 ? '🎯' : r.points === 1 ? '✅' : '❌';
+        const cls   = r.points === 3 ? 'pts-3' : r.points === 1 ? 'pts-1' : 'pts-0';
+        const emoji = r.points === 3 ? '🎯'     : r.points === 1 ? '✅'    : '❌';
         return `<div class="feed-chip ${cls}">
           <span class="fc-name">${r.user_name}</span>
           <span class="fc-score">${r.home_score}×${r.away_score}</span>
@@ -865,14 +982,17 @@ function renderFeed(feed) {
       return `<div class="feed-entry">
         <div class="feed-header">
           <div>
-            <div class="feed-title">${entry.home_team} <span class="feed-score">${entry.home_score}–${entry.away_score}</span> ${entry.away_team}</div>
-            <div class="feed-date">${fmtDate(entry.timestamp)}</div>
+            <div class="feed-title">${hFlag} ${entry.home_team} <span class="feed-score">${entry.home_score}–${entry.away_score}</span> ${entry.away_team} ${aFlag}</div>
+            <div class="feed-meta">${match ? tStage(match.stage) + ' · ' : ''}${fmtDate(entry.timestamp)}</div>
           </div>
+          ${summary ? `<div class="feed-summary">${summary}</div>` : ''}
         </div>
         ${chips ? `<div class="feed-results">${chips}</div>` : `<p style="color:var(--text-3);font-size:.8rem">${t('feed_no_bets')}</p>`}
       </div>`;
     }
     if (entry.type === 'champion_result') {
+      const got   = entry.results.filter(r => r.points > 0).length;
+      const total = entry.results.length;
       const chips = entry.results.map(r =>
         `<div class="feed-chip ${r.points>0?'pts-s':'pts-0'}">
           <span class="fc-name">${r.user_name}</span>
@@ -881,12 +1001,15 @@ function renderFeed(feed) {
         </div>`).join('');
       return `<div class="feed-entry">
         <div class="feed-header">
-          <div><div class="feed-title">${t('feed_champion')} ${entry.team}</div><div class="feed-date">${fmtDate(entry.timestamp)}</div></div>
+          <div><div class="feed-title">🏆 ${entry.team}</div><div class="feed-meta">${fmtDate(entry.timestamp)}</div></div>
+          ${total > 0 ? `<div class="feed-summary">${got}/${total} ${getCurrentLang()==='en'?'got it right':'acertaram'}</div>` : ''}
         </div>
         <div class="feed-results">${chips}</div>
       </div>`;
     }
     if (entry.type === 'scorer_result') {
+      const got   = entry.results.filter(r => r.points > 0).length;
+      const total = entry.results.length;
       const chips = entry.results.map(r =>
         `<div class="feed-chip ${r.points>0?'pts-s':'pts-0'}">
           <span class="fc-name">${r.user_name}</span>
@@ -895,7 +1018,8 @@ function renderFeed(feed) {
         </div>`).join('');
       return `<div class="feed-entry">
         <div class="feed-header">
-          <div><div class="feed-title">${t('feed_scorer')} ${entry.name}</div><div class="feed-date">${fmtDate(entry.timestamp)}</div></div>
+          <div><div class="feed-title">⚽ ${entry.name}</div><div class="feed-meta">${fmtDate(entry.timestamp)}</div></div>
+          ${total > 0 ? `<div class="feed-summary">${got}/${total} ${getCurrentLang()==='en'?'got it right':'acertaram'}</div>` : ''}
         </div>
         <div class="feed-results">${chips}</div>
       </div>`;
@@ -1700,6 +1824,7 @@ async function loadMyPage() {
   const matchMap = Object.fromEntries(allMatches.map(m => [m.id, m]));
   const dstats = computeDetailedStats(bets || [], matchMap);
   renderDetailedStats(dstats, document.getElementById('me-detailed-stats'));
+  renderTeamStats(bets || [], matchMap, document.getElementById('me-team-stats'));
 
   // My bets list
   const sorted = (bets||[]).slice().sort((a, b) => {
