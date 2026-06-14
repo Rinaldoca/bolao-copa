@@ -105,7 +105,39 @@ let adminPwd       = null;
 let editingMatchId = null;
 
 /* ─── Bootstrap ──────────────────────────────────────────────────────────── */
+/* ─── Collapsible sections ───────────────────────────────────────────────── */
+const _sectionMap = {
+  difficulty: { content: 'difficulty-container', divider: 'difficulty-divider' },
+  special:    { content: 'special-grid',          divider: 'special-divider' },
+  feed:       { content: 'feed-container',         divider: 'feed-divider' },
+};
+const _sectionCollapsed = {};
+
+function initCollapsedSections() {
+  Object.keys(_sectionMap).forEach(key => {
+    _sectionCollapsed[key] = localStorage.getItem('bolao_sec_' + key) === '1';
+  });
+}
+
+function toggleSection(key) {
+  _sectionCollapsed[key] = !_sectionCollapsed[key];
+  localStorage.setItem('bolao_sec_' + key, _sectionCollapsed[key] ? '1' : '0');
+  applyCollapsedSections();
+}
+
+function applyCollapsedSections() {
+  if (lbStageFilter) return;
+  Object.entries(_sectionMap).forEach(([key, ids]) => {
+    const contentEl = document.getElementById(ids.content);
+    const chevron   = document.querySelector(`#${ids.divider} .section-chevron`);
+    const collapsed = _sectionCollapsed[key];
+    if (contentEl) contentEl.style.display = collapsed ? 'none' : '';
+    if (chevron)   chevron.style.transform  = collapsed ? 'rotate(-90deg)' : '';
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  initCollapsedSections();
   try {
     const saved = localStorage.getItem('bolao_user');
     if (saved) setUser(JSON.parse(saved), false);
@@ -372,6 +404,7 @@ async function loadLeaderboard() {
     .forEach(el => { if (el) el.style.display = hide; });
 
   if (!lbStageFilter) loadMatchDifficulty();
+  applyCollapsedSections();
 
   if (!data.length) {
     wrap.innerHTML = `<div class="empty"><span class="icon">🏆</span>${t('lb_empty')}</div>`;
@@ -746,6 +779,7 @@ async function loadSpecialAndFeed() {
   renderFeed(feed);
   renderHistoryChart(history || []);
   loadGroupAwards();
+  applyCollapsedSections();
 }
 
 function renderHistoryChart(history) {

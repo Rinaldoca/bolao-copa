@@ -136,6 +136,9 @@ main { max-width: 860px; margin: 0 auto; padding: 28px 20px 60px; }
 .section-divider::before, .section-divider::after {
   content: ''; flex: 1; height: 1px; background: var(--border);
 }
+.section-divider.collapsible { cursor: pointer; user-select: none; }
+.section-divider.collapsible:hover { color: var(--text-2); }
+.section-chevron { font-size: .8rem; color: var(--text-3); transition: transform .2s; flex-shrink: 0; margin-left: -4px; }
 
 .mb-12 { margin-bottom: 12px; }
 
