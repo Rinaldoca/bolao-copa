@@ -955,11 +955,12 @@ function renderSpecialGrid(special, containerId) {
     </div>`;
   };
 
-  // All bets (others), skip current user who is shown above
+  // Others' bets — collapsible toggle (own pick shown separately above)
   const renderRows = (bets, myBet, resultVal, getVal, pts) => {
     const others = bets.filter(b => !currentUser || b.user_id !== currentUser.id);
     if (!others.length && !myBet) return `<p style="color:var(--text-3);font-size:.8rem;padding:8px 0">${t('special_no_bets')}</p>`;
-    return others.map(b => {
+    if (!others.length) return '';
+    const rows = others.map(b => {
       const val = getVal(b);
       const won = resultVal && val?.toLowerCase() === resultVal.toLowerCase();
       return `<div class="special-bet-row">
@@ -969,6 +970,9 @@ function renderSpecialGrid(special, containerId) {
         </div>
       </div>`;
     }).join('');
+    const label = getCurrentLang() === 'en' ? `See others (${others.length})` : `Ver outros (${others.length})`;
+    return `<button class="all-bets-toggle" onclick="const s=this.nextElementSibling;const open=s.style.display==='';s.style.display=open?'none':'';this.textContent=(open?'▼ ':'▲ ')+'${label}'" style="border-top:1px solid var(--border);margin-top:6px">▼ ${label}</button>
+    <div style="display:none">${rows}</div>`;
   };
 
   wrap.innerHTML = `
@@ -1015,6 +1019,11 @@ function renderFeed(feed) {
           <span>${emoji}</span>
         </div>`;
       }).join('');
+      const n = entry.results.length;
+      const toggleBtn = n > 0
+        ? `<button class="all-bets-toggle" onclick="const s=this.nextElementSibling;const open=s.style.display==='';s.style.display=open?'none':'';this.textContent=(open?'▼ ':'▲ ')+'${getCurrentLang()==='en'?`See bets (${n})`:`Ver palpites (${n})`}'">▼ ${getCurrentLang()==='en'?`See bets (${n})`:`Ver palpites (${n})`}</button>
+        <div style="display:none"><div class="feed-results">${chips}</div></div>`
+        : `<p style="color:var(--text-3);font-size:.8rem;padding:4px 0">${t('feed_no_bets')}</p>`;
       return `<div class="feed-entry">
         <div class="feed-header">
           <div>
@@ -1023,7 +1032,7 @@ function renderFeed(feed) {
           </div>
           ${summary ? `<div class="feed-summary">${summary}</div>` : ''}
         </div>
-        ${chips ? `<div class="feed-results">${chips}</div>` : `<p style="color:var(--text-3);font-size:.8rem">${t('feed_no_bets')}</p>`}
+        ${toggleBtn}
       </div>`;
     }
     if (entry.type === 'champion_result') {
@@ -1040,7 +1049,8 @@ function renderFeed(feed) {
           <div><div class="feed-title">🏆 ${entry.team}</div><div class="feed-meta">${fmtDate(entry.timestamp)}</div></div>
           ${total > 0 ? `<div class="feed-summary">${got}/${total} ${getCurrentLang()==='en'?'got it right':'acertaram'}</div>` : ''}
         </div>
-        <div class="feed-results">${chips}</div>
+        <button class="all-bets-toggle" onclick="const s=this.nextElementSibling;const open=s.style.display==='';s.style.display=open?'none':'';this.textContent=(open?'▼ ':'▲ ')+'${getCurrentLang()==='en'?`See picks (${total})`:`Ver palpites (${total})`}'">▼ ${getCurrentLang()==='en'?`See picks (${total})`:`Ver palpites (${total})`}</button>
+        <div style="display:none"><div class="feed-results">${chips}</div></div>
       </div>`;
     }
     if (entry.type === 'scorer_result') {
@@ -1057,7 +1067,8 @@ function renderFeed(feed) {
           <div><div class="feed-title">⚽ ${entry.name}</div><div class="feed-meta">${fmtDate(entry.timestamp)}</div></div>
           ${total > 0 ? `<div class="feed-summary">${got}/${total} ${getCurrentLang()==='en'?'got it right':'acertaram'}</div>` : ''}
         </div>
-        <div class="feed-results">${chips}</div>
+        <button class="all-bets-toggle" onclick="const s=this.nextElementSibling;const open=s.style.display==='';s.style.display=open?'none':'';this.textContent=(open?'▼ ':'▲ ')+'${getCurrentLang()==='en'?`See picks (${total})`:`Ver palpites (${total})`}'">▼ ${getCurrentLang()==='en'?`See picks (${total})`:`Ver palpites (${total})`}</button>
+        <div style="display:none"><div class="feed-results">${chips}</div></div>
       </div>`;
     }
     return '';
