@@ -592,6 +592,26 @@ function getGroupAwards() {
   };
 }
 
+function getMatchStats() {
+  const finished = db.matches.filter(m => m.status === 'finished');
+  return finished.map(m => {
+    const bets = db.bets.filter(b => b.match_id === m.id);
+    const total = bets.length;
+    if (total === 0) return null;
+    const exact   = bets.filter(b => b.points === 3).length;
+    const correct = bets.filter(b => b.points > 0).length;
+    return {
+      id: m.id,
+      home_team: m.home_team, away_team: m.away_team,
+      home_score: m.home_score, away_score: m.away_score,
+      stage: m.stage,
+      total, exact, correct,
+      exactPct: exact / total,
+      correctPct: correct / total,
+    };
+  }).filter(Boolean).sort((a, b) => a.correctPct - b.correctPct);
+}
+
 module.exports = {
   getUsers, getUserById, createUser,
   getMatches, getMatchById, createMatch, editMatch, setMatchResult, clearMatchResult, reassignMatchId, deleteMatch, replaceGroupStage,
@@ -600,7 +620,7 @@ module.exports = {
   getChampionBets, upsertChampionBet, setChampion,
   getScorerBets, upsertScorerBet, setTopScorer,
   buildGroupStandingsServer, getFeed, getPointsHistory,
-  getLeaderboard, getGroupAwards,
+  getLeaderboard, getGroupAwards, getMatchStats,
   getSettings, getAdminPassword, setAdminPassword,
   getLastSync, setLastSync,
   needsSeed, seed,

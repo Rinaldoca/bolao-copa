@@ -233,10 +233,11 @@ app.post('/api/admin/generate-round32', (req, res) => {
 
 // ── Leaderboard & Feed ────────────────────────────────────────────────────────
 
-app.get('/api/leaderboard', (req, res) => res.json(db.getLeaderboard(req.query.stage || null)));
-app.get('/api/feed',        (req, res) => res.json(db.getFeed()));
-app.get('/api/history',     (req, res) => res.json(db.getPointsHistory()));
-app.get('/api/awards',      (req, res) => res.json(db.getGroupAwards()));
+app.get('/api/leaderboard',  (req, res) => res.json(db.getLeaderboard(req.query.stage || null)));
+app.get('/api/feed',         (req, res) => res.json(db.getFeed()));
+app.get('/api/history',      (req, res) => res.json(db.getPointsHistory()));
+app.get('/api/awards',       (req, res) => res.json(db.getGroupAwards()));
+app.get('/api/match-stats',  (req, res) => res.json(db.getMatchStats()));
 
 // ── Backup to GitHub Gist ─────────────────────────────────────────────────────
 

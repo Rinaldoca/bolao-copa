@@ -42,6 +42,7 @@ const LANG_DATA = {
 
     // Section dividers
     div_awards: '🏅 Destaques do Grupo',
+    div_difficulty: '🎲 Dificuldade dos Jogos',
     div_history: '📈 Disputa pela Liderança',
     div_special: '🏆 Palpites de Campeão &amp; Artilheiro',
     div_feed: '⚡ Feed de Resultados',
@@ -165,6 +166,16 @@ const LANG_DATA = {
     pm_win: 'V',
     pm_draw: 'E',
     pm_loss: 'D',
+    pm_h2h_detail: 'Jogo a jogo',
+
+    // Match difficulty
+    diff_empty: 'Nenhum jogo finalizado ainda.',
+    diff_correct: 'acertaram o resultado',
+    diff_exact: 'acertaram o placar exato',
+    diff_bets: 'palpites',
+    diff_hardest: '🔴 Mais difíceis',
+    diff_easiest: '🟢 Mais fáceis',
+    diff_sorted: 'ordenado do mais difícil ao mais fácil',
 
     // Special bets
     special_open: '🟢 Apostas abertas',
@@ -290,6 +301,7 @@ const LANG_DATA = {
 
     // Section dividers
     div_awards: '🏅 Group Highlights',
+    div_difficulty: '🎲 Match Difficulty',
     div_history: '📈 Race to the Top',
     div_special: '🏆 Champion &amp; Top Scorer Picks',
     div_feed: '⚡ Results Feed',
@@ -413,6 +425,16 @@ const LANG_DATA = {
     pm_win: 'W',
     pm_draw: 'D',
     pm_loss: 'L',
+    pm_h2h_detail: 'Match by match',
+
+    // Match difficulty
+    diff_empty: 'No finished matches yet.',
+    diff_correct: 'got the result right',
+    diff_exact: 'got the exact score',
+    diff_bets: 'bets',
+    diff_hardest: '🔴 Hardest',
+    diff_easiest: '🟢 Easiest',
+    diff_sorted: 'sorted hardest to easiest',
 
     // Special bets
     special_open: '🟢 Bets open',

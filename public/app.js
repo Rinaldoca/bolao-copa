@@ -254,14 +254,39 @@ async function openPlayerModal(userId, name) {
         else if ((myB.points || 0) < (b.points || 0)) losses++;
         else draws++;
       });
+      const matchMap2 = Object.fromEntries(allMatches.map(m => [m.id, m]));
+      const finishedShared = shared.filter(b => matchMap2[b.match_id]?.status === 'finished')
+        .sort((a, b) => new Date(matchMap2[a.match_id]?.match_date||0) - new Date(matchMap2[b.match_id]?.match_date||0));
+      const h2hRows = finishedShared.map(b => {
+        const m   = matchMap2[b.match_id];
+        const myB = myBetMap[b.match_id];
+        const myPtsR  = myB.points  || 0;
+        const thPtsR  = b.points    || 0;
+        const outcome = myPtsR > thPtsR ? 'win' : myPtsR < thPtsR ? 'loss' : 'draw';
+        const chip = p => `<span class="pts-chip ${p===3?'pts-3':p===1?'pts-1':'pts-0'}">${p}pt</span>`;
+        return `<div class="h2h-row">
+          <div class="h2h-match">${_flagMap[m.home_team]||''} ${m.home_team} ${m.home_score}×${m.away_score} ${m.away_team} ${_flagMap[m.away_team]||''}</div>
+          <div class="h2h-bets">
+            <span class="h2h-bet-me">${myB.home_score}×${myB.away_score} ${chip(myPtsR)}</span>
+            <span class="h2h-vs">vs</span>
+            <span class="h2h-bet-them">${b.home_score}×${b.away_score} ${chip(thPtsR)}</span>
+            <span class="rivalry-badge ${outcome}" style="font-size:.65rem;padding:1px 6px">${outcome==='win'?'▲':outcome==='loss'?'▼':'='}</span>
+          </div>
+        </div>`;
+      }).join('');
+
       rivalryHtml = `
         <div class="rivalry-bar">
           <span style="font-weight:700">${t('pm_rivalry')}</span>
           <span style="color:var(--text-3)">${shared.length} ${shared.length!==1 ? (getCurrentLang()==='en'?'games':'jogos') : (getCurrentLang()==='en'?'game':'jogo')} ${getCurrentLang()==='en'?'in common':'em comum'}</span>
           <span>${t('pm_you')} <strong>${myPts} pts</strong> · ${name}: <strong>${theirPts} pts</strong></span>
-          <span class="rivalry-badge win">${wins}${t('pm_win')}</span>
-          <span class="rivalry-badge draw">${draws}${t('pm_draw')}</span>
-          <span class="rivalry-badge loss">${losses}${t('pm_loss')}</span>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <span class="rivalry-badge win">${wins}${t('pm_win')}</span>
+            <span class="rivalry-badge draw">${draws}${t('pm_draw')}</span>
+            <span class="rivalry-badge loss">${losses}${t('pm_loss')}</span>
+            ${h2hRows ? `<button class="h2h-toggle-btn" onclick="const d=this.closest('.rivalry-bar').querySelector('.h2h-detail');d.classList.toggle('hidden');this.textContent=d.classList.contains('hidden')?'▼ ${t('pm_h2h_detail')}':'▲ ${t('pm_h2h_detail')}'">▼ ${t('pm_h2h_detail')}</button>` : ''}
+          </div>
+          ${h2hRows ? `<div class="h2h-detail hidden">${h2hRows}</div>` : ''}
         </div>`;
     }
   }
@@ -335,22 +360,18 @@ async function loadLeaderboard() {
     pillsWrap.innerHTML = `<div class="filter-group">${pills}</div>`;
   }
 
-  // Show/hide history and special-grid sections based on stage filter
-  const historyDiv   = document.getElementById('history-container');
-  const historyDivider = document.getElementById('history-divider');
-  const specialGrid  = document.getElementById('special-grid');
-  const specialDivider = document.getElementById('special-divider');
-  if (lbStageFilter) {
-    if (historyDiv)    historyDiv.style.display    = 'none';
-    if (historyDivider) historyDivider.style.display = 'none';
-    if (specialGrid)   specialGrid.style.display   = 'none';
-    if (specialDivider) specialDivider.style.display = 'none';
-  } else {
-    if (historyDiv)    historyDiv.style.display    = '';
-    if (historyDivider) historyDivider.style.display = '';
-    if (specialGrid)   specialGrid.style.display   = '';
-    if (specialDivider) specialDivider.style.display = '';
-  }
+  // Show/hide history, difficulty, and special-grid sections based on stage filter
+  const historyDiv      = document.getElementById('history-container');
+  const historyDivider  = document.getElementById('history-divider');
+  const difficultyDiv   = document.getElementById('difficulty-container');
+  const difficultyDiv2  = document.getElementById('difficulty-divider');
+  const specialGrid     = document.getElementById('special-grid');
+  const specialDivider  = document.getElementById('special-divider');
+  const hide = lbStageFilter ? 'none' : '';
+  [historyDiv, historyDivider, difficultyDiv, difficultyDiv2, specialGrid, specialDivider]
+    .forEach(el => { if (el) el.style.display = hide; });
+
+  if (!lbStageFilter) loadMatchDifficulty();
 
   if (!data.length) {
     wrap.innerHTML = `<div class="empty"><span class="icon">🏆</span>${t('lb_empty')}</div>`;
@@ -1547,6 +1568,53 @@ function renderGroupAwards(awards) {
       a => `${a._neg} ${getCurrentLang()==='en'?(a._neg!==1?'misses':'miss'):'erro'+(a._neg!==1?'s':'')} ${getCurrentLang()==='en'?'in a row':'seguidos'}`,
       a => a.negStreak > 0 ? t('award_bad_run_active') : t('award_bad_run_worst'))}
   </div>`;
+}
+
+/* ─── Match difficulty ───────────────────────────────────────────────────── */
+async function loadMatchDifficulty() {
+  const el = document.getElementById('difficulty-container');
+  if (!el) return;
+  const stats = await api('/api/match-stats');
+  renderMatchDifficulty(stats);
+}
+
+function renderMatchDifficulty(stats) {
+  const el = document.getElementById('difficulty-container');
+  if (!el) return;
+  if (!stats || stats.length === 0) {
+    el.innerHTML = `<div class="empty" style="padding:16px 20px"><span class="icon">🎲</span>${t('diff_empty')}</div>`;
+    return;
+  }
+
+  const rows = stats.map((m, i) => {
+    const correctPct = Math.round(m.correctPct * 100);
+    const exactPct   = Math.round(m.exactPct   * 100);
+    const difficulty = i < Math.ceil(stats.length / 3) ? 'hard'
+                     : i >= Math.floor(stats.length * 2 / 3) ? 'easy' : 'mid';
+    const flag = `${_flagMap[m.home_team]||''} ${m.home_team} ${m.home_score}×${m.away_score} ${m.away_team} ${_flagMap[m.away_team]||''}`;
+    return `<div class="diff-row diff-${difficulty}">
+      <div class="diff-match">${flag}</div>
+      <div class="diff-bars">
+        <div class="diff-bar-wrap" title="${correctPct}% ${t('diff_correct')}">
+          <div class="diff-bar-fill diff-bar-correct" style="width:${correctPct}%"></div>
+          <span class="diff-bar-label">${correctPct}%</span>
+        </div>
+        <div class="diff-bar-wrap" title="${exactPct}% ${t('diff_exact')}">
+          <div class="diff-bar-fill diff-bar-exact" style="width:${exactPct}%"></div>
+          <span class="diff-bar-label diff-label-exact">${exactPct}% 🎯</span>
+        </div>
+      </div>
+      <div class="diff-total">${m.total} ${t('diff_bets')}</div>
+    </div>`;
+  }).join('');
+
+  const hardCount = stats.filter((_, i) => i < Math.ceil(stats.length / 3)).length;
+  el.innerHTML = `<div class="diff-legend">
+    <span class="diff-legend-item hard">${t('diff_hardest')}</span>
+    <span class="diff-legend-item easy">${t('diff_easiest')}</span>
+    <span style="color:var(--text-3);font-size:.72rem;margin-left:auto">${t('diff_sorted')}</span>
+  </div>
+  <div class="diff-list">${rows}</div>`;
 }
 
 /* ─── My page ────────────────────────────────────────────────────────────── */
