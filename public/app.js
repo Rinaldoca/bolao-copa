@@ -901,54 +901,56 @@ function renderSpecialGrid(special, containerId) {
     ? `<span class="special-card-open">${t('special_open')}</span>`
     : `<span class="special-card-closed">${t('special_closed')}</span>`;
 
-  const renderRows = (bets, resultVal, getVal, pts) =>
-    bets.length === 0
-      ? `<p style="color:var(--text-3);font-size:.8rem;padding:8px 0">${t('special_no_bets')}</p>`
-      : bets.map(b => {
-          const val = getVal(b);
-          const won = resultVal && val?.toLowerCase() === resultVal.toLowerCase();
-          return `<div class="special-bet-row">
-            <div><span class="special-user">${b.user_name}</span><br><span class="special-pick">${val}</span></div>
-            <div class="special-pts ${won ? 'won' : resultVal ? 'lost' : ''}">
-              ${won ? `✓ +${pts}pts` : resultVal ? '—' : ''}
-            </div>
-          </div>`;
-        }).join('');
+  const myChampBet  = currentUser ? champBets.find(b => b.user_id === currentUser.id) : null;
+  const myScorerBet = currentUser ? scorerBets.find(b => b.user_id === currentUser.id) : null;
 
-  // When bets are open: show own pick or CTA (no peeking at others)
+  // My bet highlight + optional CTA to place/change (when open)
   const myPickBlock = (myBet, getVal, resultVal) => {
-    if (!currentUser) return `<div class="special-cta"><a href="#" onclick="openUserModal();return false;" class="btn btn-ghost btn-sm">${t('login_to_bet_link')}</a></div>`;
+    if (!currentUser && champOpen) return `<div class="special-cta"><a href="#" onclick="openUserModal();return false;" class="btn btn-ghost btn-sm">${t('login_to_bet_link')}</a></div>`;
     const val = myBet ? getVal(myBet) : null;
     const won = resultVal && val?.toLowerCase() === resultVal.toLowerCase();
     if (val) return `<div class="special-my-pick">
       <div class="smp-label">${t('special_your_pick')}</div>
       <div class="smp-val">${val}${won ? ' ✓' : ''}</div>
-      ${!resultVal ? `<button class="btn btn-ghost btn-sm smp-change" onclick="showTab('me')">${t('special_change')}</button>` : ''}
+      ${champOpen && !resultVal ? `<button class="btn btn-ghost btn-sm smp-change" onclick="showTab('me')">${t('special_change')}</button>` : ''}
     </div>`;
+    if (!champOpen) return '';
     return `<div class="special-cta">
       <div style="color:var(--text-3);font-size:.82rem;margin-bottom:8px">${t('special_not_placed')}</div>
       <button class="btn btn-primary btn-sm" onclick="showTab('me')">${t('special_place_bet')}</button>
     </div>`;
   };
 
-  const myChampBet  = currentUser ? champBets.find(b => b.user_id === currentUser.id) : null;
-  const myScorerBet = currentUser ? scorerBets.find(b => b.user_id === currentUser.id) : null;
-
-  const champBody  = champOpen  ? myPickBlock(myChampBet,  getChampVal,  champResult)  + (champBets.length  ? `<p class="special-count">${champBets.length} ${t('special_bet_count')}</p>`  : '') : renderRows(champBets,  champResult,  getChampVal,  10);
-  const scorerBody = champOpen  ? myPickBlock(myScorerBet, getScorerVal, scorerResult) + (scorerBets.length ? `<p class="special-count">${scorerBets.length} ${t('special_bet_count')}</p>` : '') : renderRows(scorerBets, scorerResult, getScorerVal, 5);
+  // All bets (others), skip current user who is shown above
+  const renderRows = (bets, myBet, resultVal, getVal, pts) => {
+    const others = bets.filter(b => !currentUser || b.user_id !== currentUser.id);
+    if (!others.length && !myBet) return `<p style="color:var(--text-3);font-size:.8rem;padding:8px 0">${t('special_no_bets')}</p>`;
+    return others.map(b => {
+      const val = getVal(b);
+      const won = resultVal && val?.toLowerCase() === resultVal.toLowerCase();
+      return `<div class="special-bet-row">
+        <div><span class="special-user">${b.user_name}</span><br><span class="special-pick">${val}</span></div>
+        <div class="special-pts ${won ? 'won' : resultVal ? 'lost' : ''}">
+          ${won ? `✓ +${pts}pts` : resultVal ? '—' : ''}
+        </div>
+      </div>`;
+    }).join('');
+  };
 
   wrap.innerHTML = `
     <div class="special-card">
       <div class="special-card-title">${t('special_champion')}</div>
       ${statusBadge}
       ${champResult ? `<div class="special-card-result">✓ ${champResult}</div>` : ''}
-      ${champBody}
+      ${myPickBlock(myChampBet,  getChampVal,  champResult)}
+      ${renderRows(champBets,  myChampBet,  champResult,  getChampVal,  10)}
     </div>
     <div class="special-card">
       <div class="special-card-title">${t('special_scorer')}</div>
       ${statusBadge}
       ${scorerResult ? `<div class="special-card-result">✓ ${scorerResult}</div>` : ''}
-      ${scorerBody}
+      ${myPickBlock(myScorerBet, getScorerVal, scorerResult)}
+      ${renderRows(scorerBets, myScorerBet, scorerResult, getScorerVal, 5)}
     </div>`;
 }
 
