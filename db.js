@@ -593,6 +593,7 @@ function getGroupAwards() {
 }
 
 function getMatchStats() {
+  const db = load();
   const finished = db.matches.filter(m => m.status === 'finished');
   return finished.map(m => {
     const bets = db.bets.filter(b => b.match_id === m.id);
