@@ -90,6 +90,17 @@ document.addEventListener('click', e => {
 });
 
 /* ─── State ──────────────────────────────────────────────────────────────── */
+/* ─── Avatar helpers ─────────────────────────────────────────────────────── */
+const _AVATAR_COLORS = ['#E74C3C','#E67E22','#2ECC71','#1ABC9C','#3498DB','#9B59B6','#E91E63','#FF5722','#00BCD4','#F39C12'];
+function _avatarColor(id) { return _AVATAR_COLORS[(id || 0) % _AVATAR_COLORS.length]; }
+function _initials(name) {
+  const p = (name || '?').trim().split(/\s+/);
+  return p.length >= 2 ? (p[0][0] + p[p.length-1][0]).toUpperCase() : (name||'?').slice(0,2).toUpperCase();
+}
+function avatarHtml(name, id, size = 32) {
+  return `<div class="avatar" style="background:${_avatarColor(id)};width:${size}px;height:${size}px;line-height:${size}px;font-size:${Math.round(size*.38)}px">${_initials(name)}</div>`;
+}
+
 let currentUser    = null;
 let allMatches     = [];
 let userBets       = {};
@@ -148,6 +159,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn = e.target.closest('.group-header');
     if (btn && btn.dataset.gkey !== undefined) toggleGroup(btn.dataset.gkey);
   });
+
+  // Swipe between tabs on mobile
+  const SWIPE_TABS = ['leaderboard', 'bracket', 'matches', 'me', 'compare'];
+  let _tx = 0, _ty = 0;
+  document.addEventListener('touchstart', e => {
+    _tx = e.touches[0].clientX;
+    _ty = e.touches[0].clientY;
+  }, { passive: true });
+  document.addEventListener('touchend', e => {
+    if (e.target.closest('input,select,textarea,.modal,.modal-overlay,.cp-dropdown')) return;
+    const dx = e.changedTouches[0].clientX - _tx;
+    const dy = e.changedTouches[0].clientY - _ty;
+    if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx) * 0.75) return;
+    const active = document.querySelector('.bnav-tab.active,.tab.active')?.dataset.tab;
+    const idx = SWIPE_TABS.indexOf(active);
+    if (idx === -1) return;
+    if (dx < 0 && idx < SWIPE_TABS.length - 1) showTab(SWIPE_TABS[idx + 1]);
+    if (dx > 0 && idx > 0) showTab(SWIPE_TABS[idx - 1]);
+  }, { passive: true });
 });
 
 async function loadAll() {
@@ -188,9 +218,10 @@ async function api(url, method = 'GET', body = null) {
 /* ─── Tabs ───────────────────────────────────────────────────────────────── */
 function showTab(name) {
   document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
-  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab, .bnav-tab').forEach(el => el.classList.remove('active'));
   document.getElementById(`tab-${name}`).classList.remove('hidden');
-  document.querySelector(`.tab[data-tab="${name}"]`).classList.add('active');
+  document.querySelector(`.tab[data-tab="${name}"]`)?.classList.add('active');
+  document.querySelector(`.bnav-tab[data-tab="${name}"]`)?.classList.add('active');
   if (name === 'leaderboard') { loadLeaderboard(); loadSpecialAndFeed(); }
   if (name === 'bracket')     renderBracketTab();
   if (name === 'matches')     loadMatches();
@@ -237,10 +268,11 @@ async function openPlayerModal(userId, name) {
     api('/api/special-bets'),
     api('/api/leaderboard'),
   ]);
-  const lbEntry = (lb || []).find(p => p.id === userId) || {};
-  const pts     = lbEntry.total_points    || 0;
-  const exact   = lbEntry.exact_scores    || 0;
-  const correct = lbEntry.correct_results || 0;
+  const lbEntry  = (lb || []).find(p => p.id === userId) || {};
+  const rankPos  = (lb || []).findIndex(p => p.id === userId) + 1;
+  const pts      = lbEntry.total_points    || 0;
+  const exact    = lbEntry.exact_scores    || 0;
+  const correct  = lbEntry.correct_results || 0;
 
   const champBet  = (special?.champion_bets  || []).find(b => b.user_id === userId);
   const scorerBet = (special?.scorer_bets    || []).find(b => b.user_id === userId);
@@ -326,16 +358,29 @@ async function openPlayerModal(userId, name) {
 
   document.getElementById('player-modal-body').innerHTML = `
     ${rivalryHtml}
-    <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;gap:20px;flex-wrap:wrap">
-      <div style="text-align:center"><div style="font-size:1.8rem;font-weight:900;color:var(--gold)">${pts}</div><div style="font-size:.72rem;color:var(--text-3)">${t('pm_points')}</div></div>
-      <div style="text-align:center"><div style="font-size:1.4rem;font-weight:900;color:var(--green)">${exact}</div><div style="font-size:.72rem;color:var(--text-3)">${t('pm_exact')}</div></div>
-      <div style="text-align:center"><div style="font-size:1.4rem;font-weight:900;color:var(--blue)">${correct}</div><div style="font-size:.72rem;color:var(--text-3)">${t('pm_results')}</div></div>
-      ${champBet ? `<div style="flex:1;min-width:120px"><div style="font-size:.7rem;color:var(--text-3);margin-bottom:2px">${t('pm_champion')}</div><div style="font-weight:700${champWon?' ;color:var(--gold)':''}">${champBet.team}${champWon?' ✓':''}</div></div>` : ''}
-      ${scorerBet ? `<div style="flex:1;min-width:120px"><div style="font-size:.7rem;color:var(--text-3);margin-bottom:2px">${t('pm_scorer')}</div><div style="font-weight:700${scorerWon?';color:var(--gold)':''}">${scorerBet.name}${scorerWon?' ✓':''}</div></div>` : ''}
+    <div style="display:flex;align-items:center;gap:12px;padding:16px 20px 12px;border-bottom:1px solid var(--border)">
+      ${avatarHtml(name, userId, 44)}
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:800;font-size:1rem">${name}</div>
+        <div style="font-size:.72rem;color:var(--text-3)">#${rankPos || '—'}</div>
+      </div>
+      <div style="display:flex;gap:16px;text-align:center">
+        <div><div style="font-size:1.5rem;font-weight:900;color:var(--gold)">${pts}</div><div style="font-size:.65rem;color:var(--text-3)">${t('pm_points')}</div></div>
+        <div><div style="font-size:1.2rem;font-weight:900;color:var(--green)">${exact}</div><div style="font-size:.65rem;color:var(--text-3)">${t('pm_exact')}</div></div>
+        <div><div style="font-size:1.2rem;font-weight:900;color:var(--blue)">${correct}</div><div style="font-size:.65rem;color:var(--text-3)">${t('pm_results')}</div></div>
+      </div>
     </div>
+    ${champBet || scorerBet ? `<div style="padding:10px 20px;border-bottom:1px solid var(--border);display:flex;gap:16px;flex-wrap:wrap">
+      ${champBet ? `<div><div style="font-size:.7rem;color:var(--text-3);margin-bottom:2px">${t('pm_champion')}</div><div style="font-weight:700${champWon?' ;color:var(--gold)':''}">${champBet.team}${champWon?' ✓':''}</div></div>` : ''}
+      ${scorerBet ? `<div><div style="font-size:.7rem;color:var(--text-3);margin-bottom:2px">${t('pm_scorer')}</div><div style="font-weight:700${scorerWon?';color:var(--gold)':''}">${scorerBet.name}${scorerWon?' ✓':''}</div></div>` : ''}
+    </div>` : ''}
     <div style="padding:8px 20px 16px">
       ${betRows || `<div class="empty" style="padding:20px 0"><span class="icon">🎲</span>${t('pm_no_bets')}</div>`}
-    </div>`;
+    </div>
+    ${currentUser && currentUser.id !== userId ? `
+      <div style="padding:0 20px 16px">
+        <button class="btn btn-ghost btn-sm" style="width:100%" onclick="closePlayerModal();openCompareWith(${userId})">⚔️ ${t('pm_full_compare')}</button>
+      </div>` : ''}`;
 }
 
 async function renderUsersList() {
@@ -413,16 +458,24 @@ async function loadLeaderboard() {
   }
   const rankEmoji = ['🥇','🥈','🥉'];
   const rankClass = ['r1','r2','r3'];
+  const prevRanks = JSON.parse(localStorage.getItem('bolao_prev_ranks') || '{}');
   wrap.innerHTML = `
     <div class="lb-table">
       <div class="lb-header">
         <div>#</div><div>${t('lb_col_player')}</div><div style="text-align:right">${t('lb_col_pts')}</div>
         <div style="text-align:center">🎯</div><div style="text-align:center">✅</div>
       </div>
-      ${data.map((p, i) => `
+      ${data.map((p, i) => {
+        const prev = prevRanks[p.id];
+        const delta = prev != null ? prev - (i + 1) : null;
+        const movBadge = !delta ? '' :
+          delta > 0 ? `<span class="rank-move up">▲${delta}</span>` :
+                      `<span class="rank-move down">▼${Math.abs(delta)}</span>`;
+        return `
         <div class="lb-row ${currentUser?.id === p.id ? 'is-me' : ''}" onclick="openPlayerModal(${p.id},'${p.name.replace(/'/g,"&#39;")}')" style="cursor:pointer">
-          <div class="lb-rank ${rankClass[i]||''}">${rankEmoji[i]||(i+1)}</div>
-          <div style="display:flex;align-items:center;gap:6px;min-width:0">
+          <div class="lb-rank ${rankClass[i]||''}">${rankEmoji[i]||(i+1)}${movBadge}</div>
+          <div style="display:flex;align-items:center;gap:8px;min-width:0">
+            ${avatarHtml(p.name, p.id, 32)}
             <div style="min-width:0">
               <div class="lb-name">${p.name}</div>
               <div class="lb-bets">${p.total_bets} ${p.total_bets!==1?t('lb_bets_n'):t('lb_bets_1')}</div>
@@ -432,11 +485,16 @@ async function loadLeaderboard() {
           <div class="lb-pts">${p.total_points}</div>
           <div class="lb-stat">${p.exact_scores}</div>
           <div class="lb-stat">${p.correct_results}</div>
-        </div>`).join('')}
+        </div>`;
+      }).join('')}
     </div>
     <div style="text-align:center;margin-top:10px">
       <button class="btn btn-ghost btn-sm" onclick="shareLeaderboard()" style="font-size:.78rem">📋 ${t('share_lb')}</button>
     </div>`;
+  // Save current ranks for movement tracking next session
+  const newRanks = {};
+  data.forEach((p, i) => { newRanks[p.id] = i + 1; });
+  localStorage.setItem('bolao_prev_ranks', JSON.stringify(newRanks));
 }
 
 function setLbStage(stage) {
@@ -1097,9 +1155,14 @@ async function loadMatches() {
 }
 
 function updatePendingBadge() {
-  const badge = document.getElementById('pending-badge');
+  const badge  = document.getElementById('pending-badge');
+  const bBadge = document.getElementById('bnav-badge');
   if (!badge) return;
-  if (!currentUser) { badge.classList.add('hidden'); return; }
+  if (!currentUser) {
+    badge.classList.add('hidden');
+    if (bBadge) bBadge.classList.add('hidden');
+    return;
+  }
   const now = new Date();
   const LOCK_MS = 5 * 60 * 1000;
   const open = allMatches.filter(m =>
@@ -1109,8 +1172,10 @@ function updatePendingBadge() {
   if (unbetted > 0) {
     badge.textContent = unbetted;
     badge.classList.remove('hidden');
+    if (bBadge) { bBadge.textContent = unbetted; bBadge.classList.remove('hidden'); }
   } else {
     badge.classList.add('hidden');
+    if (bBadge) bBadge.classList.add('hidden');
   }
 }
 
@@ -1194,8 +1259,44 @@ function toggleUnbettedFilter(btn) {
   renderMatches();
 }
 
+function renderNextBetCard() {
+  const el = document.getElementById('next-bet-card');
+  if (!el || !currentUser) { if (el) el.innerHTML = ''; return; }
+  const LOCK_MS = 5 * 60 * 1000;
+  const now = Date.now();
+  const candidates = allMatches
+    .filter(m => m.status === 'upcoming' && !userBets[m.id] && new Date(m.match_date).getTime() - now > LOCK_MS)
+    .sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
+  if (!candidates.length) { el.innerHTML = ''; return; }
+  const next = candidates[0];
+  const ms = new Date(next.match_date).getTime() - now - LOCK_MS;
+  el.innerHTML = `<div class="nbc${ms < 3600000 ? ' urgent' : ''}">
+    <div>
+      <div class="nbc-label">⚡ ${t('next_bet_title')} (${candidates.length})</div>
+      <div class="nbc-match">${_flagMap[next.home_team]||''} ${next.home_team} × ${next.away_team} ${_flagMap[next.away_team]||''}</div>
+      <div class="nbc-time">${t('next_bet_closes')} ${fmtCountdown(ms)}</div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="scrollToMatch(${next.id})">${t('next_bet_btn')} →</button>
+  </div>`;
+}
+
+function scrollToMatch(id) {
+  if (statusFilter !== 'all') {
+    statusFilter = 'all';
+    document.querySelectorAll('#status-pills .pill').forEach(p => p.classList.remove('active'));
+    document.querySelector('#status-pills .pill')?.classList.add('active');
+  }
+  stageFilter = 'all';
+  renderMatches();
+  setTimeout(() => {
+    const el = document.getElementById(`match-${id}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 80);
+}
+
 function renderMatches() {
   const container = document.getElementById('matches-container');
+  renderNextBetCard();
   let list = allMatches;
   if (statusFilter === 'upcoming') list = list.filter(m => m.status === 'upcoming');
   if (statusFilter === 'finished') list = list.filter(m => m.status === 'finished');
@@ -1375,7 +1476,7 @@ function renderMatchCard(m) {
     : '';
 
   return `
-    <div class="match-card ${finished?'finished':''} ${bet!==undefined&&!finished?'has-bet':''} ${!finished&&!isPast&&bet===undefined&&currentUser?'needs-bet':''}">
+    <div id="match-${m.id}" class="match-card ${finished?'finished':''} ${bet!==undefined&&!finished?'has-bet':''} ${!finished&&!isPast&&bet===undefined&&currentUser?'needs-bet':''}">
       <div class="match-meta">
         <span>📅 ${dateStr}${m.venue ? ` · 📍 ${m.venue}` : ''}</span>
         ${badge}
@@ -1723,7 +1824,7 @@ function renderGroupAwards(awards) {
     return `<div class="award-card" onclick="openPlayerModal(${award.id},'${award.name.replace(/'/g,"&#39;")}')" style="cursor:pointer">
       <div class="award-emoji">${emoji}</div>
       <div class="award-title">${title}</div>
-      <div class="award-winner">${award.name}</div>
+      <div class="award-winner-row">${avatarHtml(award.name, award.id, 26)}<div class="award-winner">${award.name}</div></div>
       <div class="award-value">${valueFn(award)}</div>
       ${subFn ? `<div class="award-sub">${subFn(award)}</div>` : ''}
     </div>`;
@@ -2394,11 +2495,13 @@ async function renderComparison(idA, idB) {
   el.innerHTML = `
     <div class="cmp-header">
       <div class="cmp-player ${lead === 'a' ? 'cmp-leader' : ''}">
+        ${avatarHtml(uA.name || '—', idA, 44)}
         <div class="cmp-name">${uA.name || '—'}</div>
         <div class="cmp-rank">#${rankA || '—'}</div>
       </div>
       <div class="cmp-center-badge">⚔️</div>
       <div class="cmp-player ${lead === 'b' ? 'cmp-leader' : ''}">
+        ${avatarHtml(uB.name || '—', idB, 44)}
         <div class="cmp-name">${uB.name || '—'}</div>
         <div class="cmp-rank">#${rankB || '—'}</div>
       </div>

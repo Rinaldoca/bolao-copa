@@ -265,6 +265,21 @@ const LANG_DATA = {
     toast_clear_confirm: 'Apagar todos os seus palpites em jogos que ainda não começaram?\n\nEssa ação não pode ser desfeita.',
     toast_clear_result: 'Resultado removido ✓',
 
+    // Bottom nav
+    bnav_lb: 'Placar',
+    bnav_bracket: 'Bracket',
+    bnav_matches: 'Partidas',
+    bnav_me: 'Eu',
+    bnav_compare: 'Comparar',
+
+    // Next bet card
+    next_bet_title: 'Próximo sem palpite',
+    next_bet_closes: 'fecha em',
+    next_bet_btn: 'Apostar',
+
+    // Player modal full compare
+    pm_full_compare: 'Ver comparação completa',
+
     // Compare tab
     tab_compare: '⚔️ Comparar',
     cmp_title: 'Comparar Jogadores',
@@ -559,6 +574,21 @@ const LANG_DATA = {
     toast_fill_player: 'Enter the player name',
     toast_clear_confirm: "Delete all your bets on games that haven't started yet?\n\nThis action cannot be undone.",
     toast_clear_result: 'Result removed ✓',
+
+    // Bottom nav
+    bnav_lb: 'Standings',
+    bnav_bracket: 'Bracket',
+    bnav_matches: 'Matches',
+    bnav_me: 'Me',
+    bnav_compare: 'Compare',
+
+    // Next bet card
+    next_bet_title: 'Next without a bet',
+    next_bet_closes: 'closes in',
+    next_bet_btn: 'Bet',
+
+    // Player modal full compare
+    pm_full_compare: 'Full comparison',
 
     // Compare tab
     tab_compare: '⚔️ Compare',

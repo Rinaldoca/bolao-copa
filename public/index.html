@@ -122,6 +122,7 @@
       </div>
       <div class="filter-row" id="stage-pills-row" style="margin-top:8px"></div>
       <div class="filter-row" id="view-toggle-row" style="margin-top:8px"></div>
+      <div id="next-bet-card"></div>
       <div id="matches-container"></div>
     </section>
 
@@ -326,6 +327,33 @@
       <button class="btn btn-primary"   onclick="adminSaveEdit()">Salvar</button>
     </div>
   </div>
+
+  <!-- ──────────── BOTTOM NAV (mobile) ──────────── -->
+  <nav class="bottom-nav" id="bottom-nav">
+    <button class="bnav-tab active" data-tab="leaderboard" onclick="showTab('leaderboard')">
+      <span class="bnav-icon">🏆</span>
+      <span class="bnav-lbl" data-i18n="bnav_lb">Placar</span>
+    </button>
+    <button class="bnav-tab" data-tab="bracket" onclick="showTab('bracket')">
+      <span class="bnav-icon">🗂</span>
+      <span class="bnav-lbl" data-i18n="bnav_bracket">Bracket</span>
+    </button>
+    <button class="bnav-tab" data-tab="matches" onclick="showTab('matches')">
+      <span class="bnav-icon-wrap">
+        <span class="bnav-icon">⚽</span>
+        <span id="bnav-badge" class="bnav-badge hidden"></span>
+      </span>
+      <span class="bnav-lbl" data-i18n="bnav_matches">Partidas</span>
+    </button>
+    <button class="bnav-tab" data-tab="me" onclick="showTab('me')">
+      <span class="bnav-icon">👤</span>
+      <span class="bnav-lbl" data-i18n="bnav_me">Eu</span>
+    </button>
+    <button class="bnav-tab" data-tab="compare" onclick="showTab('compare')">
+      <span class="bnav-icon">⚔️</span>
+      <span class="bnav-lbl" data-i18n="bnav_compare">Comparar</span>
+    </button>
+  </nav>
 
   <script src="i18n.js"></script>
   <script src="app.js"></script>
