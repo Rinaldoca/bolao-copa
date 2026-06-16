@@ -465,7 +465,10 @@ async function loadLeaderboard() {
   }
   const rankEmoji = ['🥇','🥈','🥉'];
   const rankClass = ['r1','r2','r3'];
-  const prevRanks = JSON.parse(localStorage.getItem('bolao_prev_ranks') || '{}');
+  const _today = new Date().toISOString().slice(0, 10);
+  const _stored = JSON.parse(localStorage.getItem('bolao_ranks_v2') || 'null');
+  // reference = yesterday's ranks (prev); if same day just use stored.prev, otherwise stored.ranks
+  const prevRanks = _stored ? (_stored.date === _today ? (_stored.prev || {}) : (_stored.ranks || {})) : {};
   wrap.innerHTML = `
     <div class="lb-table">
       <div class="lb-header">
@@ -498,10 +501,14 @@ async function loadLeaderboard() {
     <div style="text-align:center;margin-top:10px">
       <button class="btn btn-ghost btn-sm" onclick="shareLeaderboard()" style="font-size:.78rem">📋 ${t('share_lb')}</button>
     </div>`;
-  // Save current ranks for movement tracking next session
-  const newRanks = {};
-  data.forEach((p, i) => { newRanks[p.id] = i + 1; });
-  localStorage.setItem('bolao_prev_ranks', JSON.stringify(newRanks));
+  // Save current ranks for movement tracking (only rotate once per day)
+  const currentRanks = {};
+  data.forEach((p, i) => { currentRanks[p.id] = i + 1; });
+  if (!_stored || _stored.date !== _today) {
+    localStorage.setItem('bolao_ranks_v2', JSON.stringify({
+      date: _today, ranks: currentRanks, prev: _stored?.ranks || {}
+    }));
+  }
 }
 
 function setLbStage(stage) {
@@ -1097,7 +1104,7 @@ function renderFeed(feed) {
         <div class="feed-header">
           <div>
             <div class="feed-title">${hFlag} ${entry.home_team} <span class="feed-score">${entry.home_score}–${entry.away_score}</span> ${entry.away_team} ${aFlag}</div>
-            <div class="feed-meta">${match ? tStage(match.stage) + ' · ' : ''}${fmtDate(entry.timestamp)}</div>
+            <div class="feed-meta" title="${fmtDate(entry.timestamp)}">${match ? tStage(match.stage) + ' · ' : ''}${timeAgo(entry.timestamp)}</div>
           </div>
           ${summary ? `<div class="feed-summary">${summary}</div>` : ''}
         </div>
@@ -1115,7 +1122,7 @@ function renderFeed(feed) {
         </div>`).join('');
       return `<div class="feed-entry">
         <div class="feed-header">
-          <div><div class="feed-title">🏆 ${entry.team}</div><div class="feed-meta">${fmtDate(entry.timestamp)}</div></div>
+          <div><div class="feed-title">🏆 ${entry.team}</div><div class="feed-meta" title="${fmtDate(entry.timestamp)}">${timeAgo(entry.timestamp)}</div></div>
           ${total > 0 ? `<div class="feed-summary">${got}/${total} ${getCurrentLang()==='en'?'got it right':'acertaram'}</div>` : ''}
         </div>
         <button class="all-bets-toggle" onclick="const s=this.nextElementSibling;const open=s.style.display==='';s.style.display=open?'none':'';this.textContent=(open?'▼ ':'▲ ')+'${getCurrentLang()==='en'?`See picks (${total})`:`Ver palpites (${total})`}'">▼ ${getCurrentLang()==='en'?`See picks (${total})`:`Ver palpites (${total})`}</button>
@@ -1133,7 +1140,7 @@ function renderFeed(feed) {
         </div>`).join('');
       return `<div class="feed-entry">
         <div class="feed-header">
-          <div><div class="feed-title">⚽ ${entry.name}</div><div class="feed-meta">${fmtDate(entry.timestamp)}</div></div>
+          <div><div class="feed-title">⚽ ${entry.name}</div><div class="feed-meta" title="${fmtDate(entry.timestamp)}">${timeAgo(entry.timestamp)}</div></div>
           ${total > 0 ? `<div class="feed-summary">${got}/${total} ${getCurrentLang()==='en'?'got it right':'acertaram'}</div>` : ''}
         </div>
         <button class="all-bets-toggle" onclick="const s=this.nextElementSibling;const open=s.style.display==='';s.style.display=open?'none':'';this.textContent=(open?'▼ ':'▲ ')+'${getCurrentLang()==='en'?`See picks (${total})`:`Ver palpites (${total})`}'">▼ ${getCurrentLang()==='en'?`See picks (${total})`:`Ver palpites (${total})`}</button>
@@ -1921,14 +1928,16 @@ async function loadMyPage() {
 
   const me = (leaderboard || []).find(p => p.id === currentUser.id) || {};
 
+  const myRank = (leaderboard || []).findIndex(p => p.id === currentUser.id) + 1;
+
   // Header
   document.getElementById('me-header').innerHTML = `
-    <div class="me-avatar">${currentUser.name[0].toUpperCase()}</div>
-    <div style="flex:1">
+    ${avatarHtml(currentUser.name, currentUser.id, 56)}
+    <div style="flex:1;min-width:0">
       <div class="me-name">${currentUser.name}</div>
-      <div style="color:var(--text-3);font-size:.8rem;margin-top:2px">${me.total_bets||0} ${(me.total_bets||0)!==1?t('lb_bets_n'):t('lb_bets_1')}</div>
+      <div style="color:var(--text-3);font-size:.8rem;margin-top:2px">#${myRank || '—'} · ${me.total_bets||0} ${(me.total_bets||0)!==1?t('lb_bets_n'):t('lb_bets_1')}</div>
     </div>
-    <div style="text-align:right">
+    <div style="text-align:right;flex-shrink:0">
       <div class="me-pts">${me.total_points||0}</div>
       <div class="me-pts-label">${t('me_pts')}</div>
     </div>`;
@@ -2619,6 +2628,19 @@ async function renderComparison(idA, idB) {
 
 function fmtDate(str) {
   return new Date(str).toLocaleDateString(dateLocale(), { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', timeZone:'Europe/Berlin' });
+}
+
+function timeAgo(str) {
+  const ms  = Date.now() - new Date(str).getTime();
+  const min = Math.floor(ms / 60000);
+  const h   = Math.floor(ms / 3600000);
+  const d   = Math.floor(ms / 86400000);
+  const en  = getCurrentLang() === 'en';
+  if (min < 1)  return en ? 'just now'      : 'agora';
+  if (min < 60) return en ? `${min}m ago`   : `há ${min}min`;
+  if (h   < 24) return en ? `${h}h ago`     : `há ${h}h`;
+  if (d   < 7)  return en ? `${d}d ago`     : `há ${d} dias`;
+  return fmtDate(str);
 }
 
 /* ─── Language switcher ──────────────────────────────────────────────────── */
