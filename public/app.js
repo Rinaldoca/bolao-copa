@@ -87,6 +87,13 @@ document.addEventListener('click', e => {
     const arrow = document.getElementById('cp-arrow');
     if (arrow) arrow.style.transform = '';
   }
+  ['a','b'].forEach(side => {
+    if (!e.target.closest(`#pp-wrap-${side}`)) {
+      document.getElementById(`pp-dropdown-${side}`)?.classList.add('hidden');
+      const arrow = document.getElementById(`pp-arrow-${side}`);
+      if (arrow) arrow.style.transform = '';
+    }
+  });
 });
 
 /* ─── State ──────────────────────────────────────────────────────────────── */
@@ -2349,10 +2356,81 @@ async function adminSaveEdit() {
 /* ─── Compare tab ───────────────────────────────────────────────────────── */
 let _cmpUsers = [];
 let _pendingCompareId = null;
+let _cmpSelA = null;
+let _cmpSelB = null;
 
 function openCompareWith(userId) {
   _pendingCompareId = userId;
   showTab('compare');
+}
+
+/* ── Player picker ── */
+function ppRenderList(side, users, selectedId) {
+  const list = document.getElementById(`pp-list-${side}`);
+  if (!list) return;
+  list.innerHTML = users.map(u => `
+    <div class="pp-item ${u.id === selectedId ? 'pp-selected' : ''}" data-id="${u.id}"
+         onclick="ppSelect('${side}',${u.id},'${u.name.replace(/'/g,"&#39;")}')">
+      ${avatarHtml(u.name, u.id, 28)}
+      <span class="pp-name">${u.name}</span>
+      <span class="pp-pts">${u.total_points} pts</span>
+      ${u.id === selectedId ? '<span class="pp-check">✓</span>' : ''}
+    </div>`).join('');
+}
+
+function ppSetValue(side, userId, name) {
+  const el = document.getElementById(`pp-value-${side}`);
+  if (!el) return;
+  if (userId && name) {
+    el.innerHTML = `${avatarHtml(name, userId, 24)}<span style="font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</span>`;
+  } else {
+    el.innerHTML = `<span class="pp-placeholder">${t('cmp_pick_player')}</span>`;
+  }
+}
+
+function ppToggle(side, e) {
+  e.stopPropagation();
+  const other = side === 'a' ? 'b' : 'a';
+  document.getElementById(`pp-dropdown-${other}`)?.classList.add('hidden');
+  const otherArrow = document.getElementById(`pp-arrow-${other}`);
+  if (otherArrow) otherArrow.style.transform = '';
+
+  const dd    = document.getElementById(`pp-dropdown-${side}`);
+  const arrow = document.getElementById(`pp-arrow-${side}`);
+  const isOpen = !dd.classList.contains('hidden');
+  dd.classList.toggle('hidden', isOpen);
+  if (arrow) arrow.style.transform = isOpen ? '' : 'rotate(180deg)';
+  if (!isOpen) {
+    const search = document.getElementById(`pp-search-${side}`);
+    if (search) { search.value = ''; ppFilter(side, ''); }
+    setTimeout(() => search?.focus(), 50);
+  }
+}
+
+function ppSelect(side, userId, name) {
+  if (side === 'a') _cmpSelA = userId;
+  else              _cmpSelB = userId;
+  ppSetValue(side, userId, name);
+  document.querySelectorAll(`#pp-list-${side} .pp-item`).forEach(el => {
+    const sel = Number(el.dataset.id) === userId;
+    el.classList.toggle('pp-selected', sel);
+    el.querySelector('.pp-check')?.remove();
+    if (sel) el.insertAdjacentHTML('beforeend', '<span class="pp-check">✓</span>');
+  });
+  document.getElementById(`pp-dropdown-${side}`)?.classList.add('hidden');
+  const arrow = document.getElementById(`pp-arrow-${side}`);
+  if (arrow) arrow.style.transform = '';
+  if (_cmpSelA && _cmpSelB && _cmpSelA !== _cmpSelB) renderComparison(_cmpSelA, _cmpSelB);
+  else document.getElementById('compare-result').innerHTML =
+    `<div class="empty" style="padding:40px 0"><span class="icon">⚔️</span><p>${t('cmp_pick_both')}</p></div>`;
+}
+
+function ppFilter(side, q) {
+  const lq = q.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,'');
+  document.querySelectorAll(`#pp-list-${side} .pp-item`).forEach(el => {
+    const name = (el.querySelector('.pp-name')?.textContent||'').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,'');
+    el.style.display = name.includes(lq) ? '' : 'none';
+  });
 }
 
 async function loadComparePage() {
@@ -2360,42 +2438,24 @@ async function loadComparePage() {
     const lb = await api('/api/leaderboard') || [];
     _cmpUsers = lb;
   }
-  const selA = document.getElementById('cmp-select-a');
-  const selB = document.getElementById('cmp-select-b');
-
-  const prevA = selA.value, prevB = selB.value;
-  const opts = _cmpUsers.map(u =>
-    `<option value="${u.id}">${u.name}</option>`
-  ).join('');
-  const blank = `<option value="">${t('cmp_pick_player')}</option>`;
-  selA.innerHTML = blank + opts;
-  selB.innerHTML = blank + opts;
 
   if (_pendingCompareId !== null) {
-    // came from leaderboard ⚔️ button: A = current user (or first available), B = target
-    selB.value = String(_pendingCompareId);
-    if (currentUser) selA.value = String(currentUser.id);
-    else selA.value = _cmpUsers.find(u => u.id !== _pendingCompareId)?.id ?? '';
+    _cmpSelB = _pendingCompareId;
+    if (currentUser && !_cmpSelA) _cmpSelA = currentUser.id;
     _pendingCompareId = null;
   } else {
-    // restore previous selection; auto-select logged-in user as A if nothing chosen yet
-    selA.value = prevA || (currentUser ? String(currentUser.id) : '');
-    selB.value = prevB || '';
+    if (!_cmpSelA && currentUser) _cmpSelA = currentUser.id;
   }
 
-  if (selA.value && selB.value && selA.value !== selB.value) {
-    renderComparison(Number(selA.value), Number(selB.value));
-  } else {
-    document.getElementById('compare-result').innerHTML =
-      `<div class="empty" style="padding:40px 0"><span class="icon">⚔️</span><p>${t('cmp_pick_both')}</p></div>`;
-  }
-}
+  ppRenderList('a', _cmpUsers, _cmpSelA);
+  ppRenderList('b', _cmpUsers, _cmpSelB);
 
-function onCmpSelect() {
-  const selA = document.getElementById('cmp-select-a');
-  const selB = document.getElementById('cmp-select-b');
-  const idA = Number(selA.value), idB = Number(selB.value);
-  if (idA && idB && idA !== idB) renderComparison(idA, idB);
+  const uA = _cmpSelA ? _cmpUsers.find(u => u.id === _cmpSelA) : null;
+  const uB = _cmpSelB ? _cmpUsers.find(u => u.id === _cmpSelB) : null;
+  ppSetValue('a', uA?.id || null, uA?.name || null);
+  ppSetValue('b', uB?.id || null, uB?.name || null);
+
+  if (_cmpSelA && _cmpSelB && _cmpSelA !== _cmpSelB) renderComparison(_cmpSelA, _cmpSelB);
   else document.getElementById('compare-result').innerHTML =
     `<div class="empty" style="padding:40px 0"><span class="icon">⚔️</span><p>${t('cmp_pick_both')}</p></div>`;
 }

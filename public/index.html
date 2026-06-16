@@ -153,13 +153,27 @@
         </div>
       </div>
       <div class="compare-selectors">
-        <select id="cmp-select-a" class="input" onchange="onCmpSelect()">
-          <option value="" data-i18n="cmp_pick_player">Escolha um jogador...</option>
-        </select>
+        <div class="pp-wrap" id="pp-wrap-a">
+          <button class="pp-btn" id="pp-btn-a" onclick="ppToggle('a',event)" type="button">
+            <span class="pp-value" id="pp-value-a"><span class="pp-placeholder" data-i18n="cmp_pick_player">Escolha um jogador...</span></span>
+            <span class="pp-arrow" id="pp-arrow-a">▾</span>
+          </button>
+          <div class="pp-dropdown hidden" id="pp-dropdown-a">
+            <div class="pp-search-wrap"><input class="pp-search" id="pp-search-a" type="text" placeholder="🔍 Buscar..." oninput="ppFilter('a',this.value)" autocomplete="off"></div>
+            <div class="pp-list" id="pp-list-a"></div>
+          </div>
+        </div>
         <span class="cmp-vs-label">⚔️</span>
-        <select id="cmp-select-b" class="input" onchange="onCmpSelect()">
-          <option value="" data-i18n="cmp_pick_player">Escolha um jogador...</option>
-        </select>
+        <div class="pp-wrap" id="pp-wrap-b">
+          <button class="pp-btn" id="pp-btn-b" onclick="ppToggle('b',event)" type="button">
+            <span class="pp-value" id="pp-value-b"><span class="pp-placeholder" data-i18n="cmp_pick_player">Escolha um jogador...</span></span>
+            <span class="pp-arrow" id="pp-arrow-b">▾</span>
+          </button>
+          <div class="pp-dropdown hidden" id="pp-dropdown-b">
+            <div class="pp-search-wrap"><input class="pp-search" id="pp-search-b" type="text" placeholder="🔍 Buscar..." oninput="ppFilter('b',this.value)" autocomplete="off"></div>
+            <div class="pp-list" id="pp-list-b"></div>
+          </div>
+        </div>
       </div>
       <div id="compare-result"></div>
     </section>
