@@ -35,6 +35,7 @@
       <button class="tab" data-tab="bracket"     onclick="showTab('bracket')" data-i18n="tab_bracket">🗂 Chaveamento</button>
       <button class="tab" data-tab="matches"     onclick="showTab('matches')"><span data-i18n="tab_matches">⚽ Partidas</span><span id="pending-badge" class="pending-badge hidden"></span></button>
       <button class="tab" data-tab="me"          onclick="showTab('me')" data-i18n="tab_me">👤 Eu</button>
+      <button class="tab" data-tab="compare"     onclick="showTab('compare')" data-i18n="tab_compare">⚔️ Comparar</button>
       <button class="tab" data-tab="admin"       onclick="showTab('admin')" data-i18n="tab_admin">⚙️ Admin</button>
     </nav>
   </header>
@@ -140,6 +141,26 @@
         <div class="section-divider"><span data-i18n="div_my_bets">Meus Palpites</span></div>
         <div id="me-bets"></div>
       </div>
+    </section>
+
+    <!-- ──────────── COMPARAR ──────────── -->
+    <section id="tab-compare" class="tab-pane hidden">
+      <div class="pane-header">
+        <div>
+          <h2 data-i18n="cmp_title">Comparar Jogadores</h2>
+          <p class="pane-sub" data-i18n="cmp_sub">Escolha dois jogadores para ver o confronto direto.</p>
+        </div>
+      </div>
+      <div class="compare-selectors">
+        <select id="cmp-select-a" class="input" onchange="onCmpSelect()">
+          <option value="" data-i18n="cmp_pick_player">Escolha um jogador...</option>
+        </select>
+        <span class="cmp-vs-label">⚔️</span>
+        <select id="cmp-select-b" class="input" onchange="onCmpSelect()">
+          <option value="" data-i18n="cmp_pick_player">Escolha um jogador...</option>
+        </select>
+      </div>
+      <div id="compare-result"></div>
     </section>
 
     <!-- ──────────── ADMIN ──────────── -->

@@ -195,6 +195,7 @@ function showTab(name) {
   if (name === 'bracket')     renderBracketTab();
   if (name === 'matches')     loadMatches();
   if (name === 'me')          loadMyPage();
+  if (name === 'compare')     loadComparePage();
   if (name === 'admin' && adminPwd) loadAdminMatches();
 }
 
@@ -421,9 +422,12 @@ async function loadLeaderboard() {
       ${data.map((p, i) => `
         <div class="lb-row ${currentUser?.id === p.id ? 'is-me' : ''}" onclick="openPlayerModal(${p.id},'${p.name.replace(/'/g,"&#39;")}')" style="cursor:pointer">
           <div class="lb-rank ${rankClass[i]||''}">${rankEmoji[i]||(i+1)}</div>
-          <div>
-            <div class="lb-name">${p.name}</div>
-            <div class="lb-bets">${p.total_bets} ${p.total_bets!==1?t('lb_bets_n'):t('lb_bets_1')}</div>
+          <div style="display:flex;align-items:center;gap:6px;min-width:0">
+            <div style="min-width:0">
+              <div class="lb-name">${p.name}</div>
+              <div class="lb-bets">${p.total_bets} ${p.total_bets!==1?t('lb_bets_n'):t('lb_bets_1')}</div>
+            </div>
+            ${currentUser && currentUser.id !== p.id ? `<button class="lb-cmp-btn" onclick="event.stopPropagation();openCompareWith(${p.id})" title="Comparar">⚔️</button>` : ''}
           </div>
           <div class="lb-pts">${p.total_points}</div>
           <div class="lb-stat">${p.exact_scores}</div>
@@ -2241,6 +2245,215 @@ async function adminSaveEdit() {
 }
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
+/* ─── Compare tab ───────────────────────────────────────────────────────── */
+let _cmpUsers = [];
+let _pendingCompareId = null;
+
+function openCompareWith(userId) {
+  _pendingCompareId = userId;
+  showTab('compare');
+}
+
+async function loadComparePage() {
+  if (!_cmpUsers.length) {
+    const lb = await api('/api/leaderboard') || [];
+    _cmpUsers = lb;
+  }
+  const selA = document.getElementById('cmp-select-a');
+  const selB = document.getElementById('cmp-select-b');
+
+  const prevA = selA.value, prevB = selB.value;
+  const opts = _cmpUsers.map(u =>
+    `<option value="${u.id}">${u.name}</option>`
+  ).join('');
+  const blank = `<option value="">${t('cmp_pick_player')}</option>`;
+  selA.innerHTML = blank + opts;
+  selB.innerHTML = blank + opts;
+
+  if (_pendingCompareId !== null) {
+    // came from leaderboard ⚔️ button: A = current user (or first available), B = target
+    selB.value = String(_pendingCompareId);
+    if (currentUser) selA.value = String(currentUser.id);
+    else selA.value = _cmpUsers.find(u => u.id !== _pendingCompareId)?.id ?? '';
+    _pendingCompareId = null;
+  } else {
+    // restore previous selection; auto-select logged-in user as A if nothing chosen yet
+    selA.value = prevA || (currentUser ? String(currentUser.id) : '');
+    selB.value = prevB || '';
+  }
+
+  if (selA.value && selB.value && selA.value !== selB.value) {
+    renderComparison(Number(selA.value), Number(selB.value));
+  } else {
+    document.getElementById('compare-result').innerHTML =
+      `<div class="empty" style="padding:40px 0"><span class="icon">⚔️</span><p>${t('cmp_pick_both')}</p></div>`;
+  }
+}
+
+function onCmpSelect() {
+  const selA = document.getElementById('cmp-select-a');
+  const selB = document.getElementById('cmp-select-b');
+  const idA = Number(selA.value), idB = Number(selB.value);
+  if (idA && idB && idA !== idB) renderComparison(idA, idB);
+  else document.getElementById('compare-result').innerHTML =
+    `<div class="empty" style="padding:40px 0"><span class="icon">⚔️</span><p>${t('cmp_pick_both')}</p></div>`;
+}
+
+async function renderComparison(idA, idB) {
+  const el = document.getElementById('compare-result');
+  el.innerHTML = `<div class="empty" style="padding:32px 0"><span class="icon">⏳</span></div>`;
+
+  const [betsA, betsB, special, lb] = await Promise.all([
+    api(`/api/bets?user_id=${idA}`),
+    api(`/api/bets?user_id=${idB}`),
+    api('/api/special-bets'),
+    api('/api/leaderboard'),
+  ]);
+
+  const rankA = lb.findIndex(u => u.id === idA) + 1;
+  const rankB = lb.findIndex(u => u.id === idB) + 1;
+  const uA = lb.find(u => u.id === idA) || {};
+  const uB = lb.find(u => u.id === idB) || {};
+
+  const champResult  = special?.champion;
+  const scorerResult = special?.top_scorer;
+
+  const champA  = (special?.champion_bets  || []).find(b => b.user_id === idA);
+  const champB  = (special?.champion_bets  || []).find(b => b.user_id === idB);
+  const scorerA = (special?.scorer_bets    || []).find(b => b.user_id === idA);
+  const scorerB = (special?.scorer_bets    || []).find(b => b.user_id === idB);
+
+  const champWonA  = champResult  && champA  && champA.team.toLowerCase()  === champResult.toLowerCase();
+  const champWonB  = champResult  && champB  && champB.team.toLowerCase()  === champResult.toLowerCase();
+  const scorerWonA = scorerResult && scorerA && scorerA.name.toLowerCase() === scorerResult.toLowerCase();
+  const scorerWonB = scorerResult && scorerB && scorerB.name.toLowerCase() === scorerResult.toLowerCase();
+
+  const matchMap = Object.fromEntries(allMatches.map(m => [m.id, m]));
+  const mapA = Object.fromEntries((betsA || []).map(b => [b.match_id, b]));
+  const mapB = Object.fromEntries((betsB || []).map(b => [b.match_id, b]));
+
+  const sharedIds = Object.keys(mapA).filter(id => mapB[id] !== undefined).map(Number);
+  const finished  = sharedIds.filter(id => matchMap[id]?.status === 'finished');
+  finished.sort((a, b) => new Date(matchMap[a]?.match_date||0) - new Date(matchMap[b]?.match_date||0));
+
+  let winsA = 0, winsB = 0, draws = 0, ptsA = 0, ptsB = 0;
+  finished.forEach(id => {
+    const ba = mapA[id], bb = mapB[id];
+    const pa = ba.points || 0, pb = bb.points || 0;
+    ptsA += pa; ptsB += pb;
+    if (pa > pb) winsA++;
+    else if (pb > pa) winsB++;
+    else draws++;
+  });
+
+  const totalA = uA.total_points || 0, totalB = uB.total_points || 0;
+  const lead = totalA > totalB ? 'a' : totalB > totalA ? 'b' : 'tie';
+
+  function statCol(val, isLeader, label) {
+    return `<div class="cmp-stat ${isLeader ? 'cmp-leader' : ''}">
+      <div class="cmp-stat-val">${val}</div>
+      <div class="cmp-stat-lbl">${label}</div>
+    </div>`;
+  }
+
+  function specialRow(pickA, wonA, pickB, wonB, label) {
+    const valA = pickA ? `${pickA}${wonA ? ' ✓' : ''}` : t('cmp_no_pick');
+    const valB = pickB ? `${pickB}${wonB ? ' ✓' : ''}` : t('cmp_no_pick');
+    return `<div class="cmp-special-row">
+      <span class="cmp-special-val ${wonA ? 'cmp-won' : ''}">${valA}</span>
+      <span class="cmp-special-lbl">${label}</span>
+      <span class="cmp-special-val ${wonB ? 'cmp-won' : ''}">${valB}</span>
+    </div>`;
+  }
+
+  const totalW = winsA + winsB + draws || 1;
+  const barA = Math.round(winsA / totalW * 100);
+  const barB = Math.round(winsB / totalW * 100);
+  const barD = 100 - barA - barB;
+
+  const matchRows = finished.map(id => {
+    const m  = matchMap[id];
+    const ba = mapA[id], bb = mapB[id];
+    const pa = ba.points || 0, pb = bb.points || 0;
+    const winner = pa > pb ? 'a' : pb > pa ? 'b' : 'tie';
+    const chip = (p) => `<span class="pts-chip ${p===3?'pts-3':p===1?'pts-1':'pts-0'}">${p}pt</span>`;
+    return `<div class="cmp-match-row ${winner === 'a' ? 'cmp-win-a' : winner === 'b' ? 'cmp-win-b' : ''}">
+      <div class="cmp-match-bet cmp-bet-a">
+        <span class="cmp-score">${ba.home_score}×${ba.away_score}</span>${chip(pa)}
+      </div>
+      <div class="cmp-match-info">
+        <div class="cmp-match-teams">${_flagMap[m.home_team]||''} ${m.home_team} <span class="cmp-result">${m.home_score}×${m.away_score}</span> ${m.away_team} ${_flagMap[m.away_team]||''}</div>
+        <div class="cmp-match-stage">${tStage(m.stage)}</div>
+      </div>
+      <div class="cmp-match-bet cmp-bet-b">
+        ${chip(pb)}<span class="cmp-score">${bb.home_score}×${bb.away_score}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="cmp-header">
+      <div class="cmp-player ${lead === 'a' ? 'cmp-leader' : ''}">
+        <div class="cmp-name">${uA.name || '—'}</div>
+        <div class="cmp-rank">#${rankA || '—'}</div>
+      </div>
+      <div class="cmp-center-badge">⚔️</div>
+      <div class="cmp-player ${lead === 'b' ? 'cmp-leader' : ''}">
+        <div class="cmp-name">${uB.name || '—'}</div>
+        <div class="cmp-rank">#${rankB || '—'}</div>
+      </div>
+    </div>
+
+    <div class="cmp-stats-row">
+      ${statCol(totalA, lead === 'a', t('cmp_points'))}
+      ${statCol(uA.exact_scores || 0, (uA.exact_scores||0) >= (uB.exact_scores||0) && (uA.exact_scores||0) > 0, t('cmp_exact'))}
+      ${statCol(uA.correct_results || 0, (uA.correct_results||0) >= (uB.correct_results||0) && (uA.correct_results||0) > 0, t('cmp_results'))}
+      <div class="cmp-stat-sep"></div>
+      ${statCol(totalB, lead === 'b', t('cmp_points'))}
+      ${statCol(uB.exact_scores || 0, (uB.exact_scores||0) > (uA.exact_scores||0), t('cmp_exact'))}
+      ${statCol(uB.correct_results || 0, (uB.correct_results||0) > (uA.correct_results||0), t('cmp_results'))}
+    </div>
+
+    <div class="cmp-special-block">
+      ${specialRow(champA?.team, champWonA, champB?.team, champWonB, t('cmp_champ'))}
+      ${specialRow(scorerA?.name, scorerWonA, scorerB?.name, scorerWonB, t('cmp_scorer'))}
+    </div>
+
+    ${finished.length > 0 ? `
+    <div class="cmp-h2h-block">
+      <div class="cmp-h2h-title">
+        <span>${t('cmp_h2h_title')}</span>
+        <span class="cmp-h2h-sub">${finished.length} ${t('cmp_h2h_games')}</span>
+      </div>
+      <div class="cmp-h2h-scores">
+        <span class="cmp-h2h-num ${winsA > winsB ? 'cmp-h2h-lead' : ''}">${winsA}${t('cmp_h2h_win')}</span>
+        <span class="cmp-h2h-num draw">${draws}${t('cmp_h2h_draw')}</span>
+        <span class="cmp-h2h-num ${winsB > winsA ? 'cmp-h2h-lead' : ''}">${winsB}${t('cmp_h2h_win')}</span>
+      </div>
+      <div class="cmp-h2h-pts">
+        <span class="${ptsA > ptsB ? 'cmp-h2h-lead' : ''}">${ptsA} pts</span>
+        <span style="color:var(--text-3);font-size:.72rem">pts em comum</span>
+        <span class="${ptsB > ptsA ? 'cmp-h2h-lead' : ''}">${ptsB} pts</span>
+      </div>
+      <div class="cmp-bar-wrap">
+        <div class="cmp-bar-a" style="width:${barA}%"></div>
+        <div class="cmp-bar-d" style="width:${barD}%"></div>
+        <div class="cmp-bar-b" style="width:${barB}%"></div>
+      </div>
+    </div>
+
+    <div class="cmp-matches-block">
+      <div class="cmp-matches-header">
+        <span>${uA.name || '—'}</span>
+        <span>${t('cmp_matches_title')}</span>
+        <span>${uB.name || '—'}</span>
+      </div>
+      ${matchRows}
+    </div>
+    ` : `<div class="empty" style="padding:32px 0"><span class="icon">⏳</span><p>${t('cmp_no_finished')}</p></div>`}
+  `;
+}
+
 function fmtDate(str) {
   return new Date(str).toLocaleDateString(dateLocale(), { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', timeZone:'Europe/Berlin' });
 }
