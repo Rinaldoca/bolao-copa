@@ -781,15 +781,16 @@ select.input { cursor: pointer; }
 .award-card {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
   padding: 16px 14px; text-align: center; transition: border-color .2s, box-shadow .2s;
+  display: flex; flex-direction: column; align-items: center;
 }
 .award-card:hover { border-color: var(--gold); box-shadow: 0 4px 16px rgba(0,0,0,.08); }
 .award-card.award-empty { opacity: .5; }
 .award-emoji  { font-size: 1.7rem; line-height: 1; margin-bottom: 6px; }
 .award-title  { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); margin-bottom: 8px; }
-.award-winner { font-size: .97rem; font-weight: 800; margin-bottom: 4px; }
-.award-value  { font-size: .85rem; font-weight: 700; color: var(--gold); }
+.award-winner { font-size: .97rem; font-weight: 800; }
+.award-value  { font-size: .85rem; font-weight: 700; color: var(--gold); margin-top: auto; padding-top: 8px; }
 .award-sub    { font-size: .72rem; color: var(--text-3); margin-top: 3px; }
-.award-empty-msg { font-size: .78rem; color: var(--text-3); }
+.award-empty-msg { font-size: .78rem; color: var(--text-3); margin-top: auto; }
 
 /* ─── Detailed stats (Eu tab) ─────────────────────────────────────────────── */
 .dstats-grid {
@@ -950,7 +951,8 @@ select.input { cursor: pointer; }
 .rank-move.down { color: var(--red); }
 
 /* ─── Award winner with avatar ───────────────────────────────────────────── */
-.award-winner-row { display: flex; align-items: center; gap: 7px; justify-content: center; margin: 4px 0; }
+.award-winner-row { display: flex; align-items: center; gap: 7px; justify-content: center; margin: 4px 0; width: 100%; }
+.award-winner-row .award-winner { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 
 /* ─── Next bet card ──────────────────────────────────────────────────────── */
 .nbc {
