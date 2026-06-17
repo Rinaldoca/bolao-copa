@@ -117,6 +117,8 @@ let statusFilter      = 'all';
 let stageFilter       = 'all';
 let showUnbettedOnly  = false;
 let lbStageFilter  = null;
+let _diffStageFilter = null;
+let _diffStats = null;
 let viewMode       = localStorage.getItem('bolao_viewmode') || 'grouped';
 let collapsedGroups = new Set(JSON.parse(localStorage.getItem('bolao_collapsed') || '[]'));
 let adminPwd       = null;
@@ -1863,8 +1865,13 @@ function renderGroupAwards(awards) {
 async function loadMatchDifficulty() {
   const el = document.getElementById('difficulty-container');
   if (!el) return;
-  const stats = await api('/api/match-stats');
-  renderMatchDifficulty(stats);
+  _diffStats = await api('/api/match-stats');
+  renderMatchDifficulty(_diffStats);
+}
+
+function setDiffStage(stage) {
+  _diffStageFilter = stage;
+  renderMatchDifficulty(_diffStats);
 }
 
 function renderMatchDifficulty(stats) {
@@ -1883,6 +1890,15 @@ function renderMatchDifficulty(stats) {
   });
 
   const stageOrder = Object.keys(byStage).sort((a, b) => stageRank(a) - stageRank(b));
+
+  // Validate filter still has data (e.g. after a reload)
+  if (_diffStageFilter && !byStage[_diffStageFilter]) _diffStageFilter = null;
+
+  const pills = [
+    `<button class="pill${_diffStageFilter === null ? ' active' : ''}" onclick="setDiffStage(null)">${t('lb_general')}</button>`,
+    ...stageOrder.map(s =>
+      `<button class="pill${_diffStageFilter === s ? ' active' : ''}" onclick="setDiffStage('${s.replace(/'/g,"&#39;")}')">${tStage(s)}</button>`)
+  ].join('');
 
   function diffClass(correctPct) {
     return correctPct < 0.34 ? 'hard' : correctPct < 0.67 ? 'mid' : 'easy';
@@ -1908,13 +1924,15 @@ function renderMatchDifficulty(stats) {
     </div>`;
   }
 
-  const sections = stageOrder.map(stage => {
+  const activeSections = _diffStageFilter ? [_diffStageFilter] : stageOrder;
+  const sections = activeSections.map(stage => {
     const top5 = byStage[stage].slice(0, 5);
-    return `<div class="diff-stage-label">${tStage(stage)}</div>
-    <div class="diff-list">${top5.map(matchRow).join('')}</div>`;
+    return (_diffStageFilter ? '' : `<div class="diff-stage-label">${tStage(stage)}</div>`) +
+      `<div class="diff-list">${top5.map(matchRow).join('')}</div>`;
   }).join('');
 
-  el.innerHTML = `<div class="diff-legend">
+  el.innerHTML = `<div class="filter-group" style="padding:8px 12px 0">${pills}</div>
+  <div class="diff-legend">
     <span class="diff-legend-item hard">${t('diff_hardest')}</span>
     <span class="diff-legend-item easy">${t('diff_easiest')}</span>
     <span style="color:var(--text-3);font-size:.72rem;margin-left:auto">${t('diff_sorted')}</span>
