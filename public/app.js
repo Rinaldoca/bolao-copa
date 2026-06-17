@@ -169,24 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btn && btn.dataset.gkey !== undefined) toggleGroup(btn.dataset.gkey);
   });
 
-  // Swipe between tabs on mobile
-  const SWIPE_TABS = ['leaderboard', 'bracket', 'matches', 'me', 'compare'];
-  let _tx = 0, _ty = 0;
-  document.addEventListener('touchstart', e => {
-    _tx = e.touches[0].clientX;
-    _ty = e.touches[0].clientY;
-  }, { passive: true });
-  document.addEventListener('touchend', e => {
-    if (e.target.closest('input,select,textarea,.modal,.modal-overlay,.cp-dropdown')) return;
-    const dx = e.changedTouches[0].clientX - _tx;
-    const dy = e.changedTouches[0].clientY - _ty;
-    if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx) * 0.75) return;
-    const active = document.querySelector('.bnav-tab.active,.tab.active')?.dataset.tab;
-    const idx = SWIPE_TABS.indexOf(active);
-    if (idx === -1) return;
-    if (dx < 0 && idx < SWIPE_TABS.length - 1) showTab(SWIPE_TABS[idx + 1]);
-    if (dx > 0 && idx > 0) showTab(SWIPE_TABS[idx - 1]);
-  }, { passive: true });
+
 });
 
 async function loadAll() {
