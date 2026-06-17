@@ -978,9 +978,9 @@ select.input { cursor: pointer; }
   padding: 4px 0; gap: 3px; font-family: inherit; transition: color .15s;
 }
 .bnav-tab.active { color: var(--gold); }
-.bnav-icon { font-size: 1.25rem; line-height: 1; }
+.bnav-icon { font-size: 1.15rem; line-height: 1; }
 .bnav-icon-wrap { position: relative; display: inline-block; }
-.bnav-lbl  { font-size: .62rem; font-weight: 600; }
+.bnav-lbl  { font-size: .58rem; font-weight: 600; }
 .bnav-badge {
   position: absolute; top: -4px; right: -6px;
   background: var(--red); color: #fff; border-radius: 999px;

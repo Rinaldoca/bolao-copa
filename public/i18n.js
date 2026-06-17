@@ -271,6 +271,7 @@ const LANG_DATA = {
     bnav_matches: 'Partidas',
     bnav_me: 'Eu',
     bnav_compare: 'Comparar',
+    bnav_admin: 'Admin',
 
     // Next bet card
     next_bet_title: 'Próximo sem palpite',
@@ -581,6 +582,7 @@ const LANG_DATA = {
     bnav_matches: 'Matches',
     bnav_me: 'Me',
     bnav_compare: 'Compare',
+    bnav_admin: 'Admin',
 
     // Next bet card
     next_bet_title: 'Next without a bet',
