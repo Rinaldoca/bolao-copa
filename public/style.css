@@ -1250,6 +1250,10 @@ select.input { cursor: pointer; }
 .diff-legend-item.hard { color: var(--red); }
 .diff-legend-item.easy { color: var(--green); }
 
+.diff-stage-label {
+  font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--text-3); padding: 10px 20px 4px;
+}
 .diff-list { padding: 0 12px 12px; display: flex; flex-direction: column; gap: 6px; }
 .diff-row {
   background: var(--surface2); border-radius: 8px;

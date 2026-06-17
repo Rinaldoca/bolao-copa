@@ -1875,13 +1875,24 @@ function renderMatchDifficulty(stats) {
     return;
   }
 
-  const rows = stats.map((m, i) => {
+  // Group by stage, preserving global sort order (hardest first within each stage)
+  const byStage = {};
+  stats.forEach(m => {
+    if (!byStage[m.stage]) byStage[m.stage] = [];
+    byStage[m.stage].push(m);
+  });
+
+  const stageOrder = Object.keys(byStage).sort((a, b) => stageRank(a) - stageRank(b));
+
+  function diffClass(correctPct) {
+    return correctPct < 0.34 ? 'hard' : correctPct < 0.67 ? 'mid' : 'easy';
+  }
+
+  function matchRow(m) {
     const correctPct = Math.round(m.correctPct * 100);
     const exactPct   = Math.round(m.exactPct   * 100);
-    const difficulty = i < Math.ceil(stats.length / 3) ? 'hard'
-                     : i >= Math.floor(stats.length * 2 / 3) ? 'easy' : 'mid';
     const flag = `${_flagMap[m.home_team]||''} ${m.home_team} ${m.home_score}×${m.away_score} ${m.away_team} ${_flagMap[m.away_team]||''}`;
-    return `<div class="diff-row diff-${difficulty}">
+    return `<div class="diff-row diff-${diffClass(m.correctPct)}">
       <div class="diff-match">${flag}</div>
       <div class="diff-bars">
         <div class="diff-bar-wrap" title="${correctPct}% ${t('diff_correct')}">
@@ -1895,15 +1906,20 @@ function renderMatchDifficulty(stats) {
       </div>
       <div class="diff-total">${m.total} ${t('diff_bets')}</div>
     </div>`;
+  }
+
+  const sections = stageOrder.map(stage => {
+    const top5 = byStage[stage].slice(0, 5);
+    return `<div class="diff-stage-label">${tStage(stage)}</div>
+    <div class="diff-list">${top5.map(matchRow).join('')}</div>`;
   }).join('');
 
-  const hardCount = stats.filter((_, i) => i < Math.ceil(stats.length / 3)).length;
   el.innerHTML = `<div class="diff-legend">
     <span class="diff-legend-item hard">${t('diff_hardest')}</span>
     <span class="diff-legend-item easy">${t('diff_easiest')}</span>
     <span style="color:var(--text-3);font-size:.72rem;margin-left:auto">${t('diff_sorted')}</span>
   </div>
-  <div class="diff-list">${rows}</div>`;
+  ${sections}`;
 }
 
 /* ─── My page ────────────────────────────────────────────────────────────── */
