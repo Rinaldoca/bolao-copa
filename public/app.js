@@ -1302,6 +1302,7 @@ function scrollToMatch(id) {
     document.querySelector('#status-pills .pill')?.classList.add('active');
   }
   stageFilter = 'all';
+  buildStagePills();
   renderMatches();
   setTimeout(() => {
     const el = document.getElementById(`match-${id}`);
@@ -2508,11 +2509,12 @@ async function renderComparison(idA, idB) {
   const el = document.getElementById('compare-result');
   el.innerHTML = `<div class="empty" style="padding:32px 0"><span class="icon">⏳</span></div>`;
 
-  const [betsA, betsB, special, lb] = await Promise.all([
+  const [betsA, betsB, special, lb, matches] = await Promise.all([
     api(`/api/bets?user_id=${idA}`),
     api(`/api/bets?user_id=${idB}`),
     api('/api/special-bets'),
     api('/api/leaderboard'),
+    api('/api/matches'),
   ]);
 
   const rankA = lb.findIndex(u => u.id === idA) + 1;
@@ -2533,7 +2535,7 @@ async function renderComparison(idA, idB) {
   const scorerWonA = scorerResult && scorerA && scorerA.name.toLowerCase() === scorerResult.toLowerCase();
   const scorerWonB = scorerResult && scorerB && scorerB.name.toLowerCase() === scorerResult.toLowerCase();
 
-  const matchMap = Object.fromEntries(allMatches.map(m => [m.id, m]));
+  const matchMap = Object.fromEntries((matches || allMatches).map(m => [m.id, m]));
   const mapA = Object.fromEntries((betsA || []).map(b => [b.match_id, b]));
   const mapB = Object.fromEntries((betsB || []).map(b => [b.match_id, b]));
 
