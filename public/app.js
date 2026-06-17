@@ -367,11 +367,11 @@ async function openPlayerModal(userId, name) {
     ${rivalryHtml}
     <div style="display:flex;align-items:center;gap:12px;padding:16px 20px 12px;border-bottom:1px solid var(--border)">
       ${avatarHtml(name, userId, 44)}
-      <div style="flex:1;min-width:0">
-        <div style="font-weight:800;font-size:1rem">${name}</div>
+      <div style="flex:1;min-width:0;overflow:hidden">
+        <div style="font-weight:800;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
         <div style="font-size:.72rem;color:var(--text-3)">#${rankPos || '—'}</div>
       </div>
-      <div style="display:flex;gap:16px;text-align:center">
+      <div style="display:flex;gap:16px;text-align:center;flex-shrink:0">
         <div><div style="font-size:1.5rem;font-weight:900;color:var(--gold)">${pts}</div><div style="font-size:.65rem;color:var(--text-3)">${t('pm_points')}</div></div>
         <div><div style="font-size:1.2rem;font-weight:900;color:var(--green)">${exact}</div><div style="font-size:.65rem;color:var(--text-3)">${t('pm_exact')}</div></div>
         <div><div style="font-size:1.2rem;font-weight:900;color:var(--blue)">${correct}</div><div style="font-size:.65rem;color:var(--text-3)">${t('pm_results')}</div></div>
