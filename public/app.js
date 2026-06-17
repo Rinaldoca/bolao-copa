@@ -490,7 +490,6 @@ async function loadLeaderboard() {
               <div class="lb-name">${p.name}</div>
               <div class="lb-bets">${p.total_bets} ${p.total_bets!==1?t('lb_bets_n'):t('lb_bets_1')}</div>
             </div>
-            ${currentUser && currentUser.id !== p.id ? `<button class="lb-cmp-btn" onclick="event.stopPropagation();openCompareWith(${p.id})" title="Comparar">⚔️</button>` : ''}
           </div>
           <div class="lb-pts">${p.total_points}</div>
           <div class="lb-stat">${p.exact_scores}</div>
