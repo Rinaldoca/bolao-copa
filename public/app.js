@@ -2195,9 +2195,9 @@ async function adminSaveResult(matchId) {
   if (isNaN(hs) || isNaN(as_) || hs < 0 || as_ < 0) { toast('Insira o placar completo', 'error'); return; }
   const res = await api(`/api/matches/${matchId}/result`, 'PUT', { password: adminPwd, home_score: hs, away_score: as_ });
   if (res.error) { toast(res.error, 'error'); return; }
-  toast(`${res.home_team} ${hs}–${as_} ${res.away_team} ✓`, 'success');
   matchBetsCache = {}; expandedBets.clear();
-  loadAdminMatches(); loadLeaderboard(); loadSpecialAndFeed();
+  await Promise.all([loadAdminMatches(), loadLeaderboard(), loadSpecialAndFeed()]);
+  toast(`${res.home_team} ${hs}–${as_} ${res.away_team} ✓ · Placar atualizado`, 'success');
   if (!document.getElementById('tab-matches').classList.contains('hidden')) loadMatches();
 }
 
@@ -2205,9 +2205,9 @@ async function adminClearResult(matchId) {
   if (!confirm('Limpar resultado? A partida volta para "a jogar" e os pontos são zerados.')) return;
   const res = await api(`/api/matches/${matchId}/clear-result`, 'POST', { password: adminPwd });
   if (res.error) { toast(res.error, 'error'); return; }
-  toast('Resultado removido ✓', 'info');
   matchBetsCache = {}; expandedBets.clear();
-  loadAdminMatches(); loadLeaderboard(); loadSpecialAndFeed();
+  await Promise.all([loadAdminMatches(), loadLeaderboard(), loadSpecialAndFeed()]);
+  toast('Resultado removido · Placar atualizado ✓', 'info');
   if (!document.getElementById('tab-matches').classList.contains('hidden')) loadMatches();
 }
 
@@ -2313,7 +2313,9 @@ async function adminImportKnockout() {
   btn.disabled = false; btn.textContent = '🏆 Importar Fase Eliminatória (API)';
   if (res.error || !res.ok) { toast(res.error || 'Erro ao importar', 'error'); return; }
   toast(`${res.added} partidas adicionadas, ${res.updated} atualizadas!`, 'success');
-  allMatches = []; loadMatches(); renderBracketTab();
+  matchBetsCache = {}; expandedBets.clear(); allMatches = [];
+  loadAdminMatches(); loadMatches(); renderBracketTab();
+  loadLeaderboard(); loadSpecialAndFeed();
 }
 
 async function adminGenerateRound32() {

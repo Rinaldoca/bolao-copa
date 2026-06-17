@@ -185,10 +185,9 @@ function upsertKnockoutMatches(matches) {
       if (m.away_team && m.away_team !== 'A definir') existing.away_team = m.away_team;
       existing.match_date = m.match_date;
       if (m.venue) existing.venue = m.venue;
-      if (m.status === 'finished' && existing.status !== 'finished') {
-        existing.status     = 'finished';
-        existing.home_score = m.home_score ?? null;
-        existing.away_score = m.away_score ?? null;
+      if (m.status === 'finished' && existing.status !== 'finished' &&
+          m.home_score != null && m.away_score != null) {
+        setMatchResult(existing.id, m.home_score, m.away_score);
       }
       updated++;
     } else {
