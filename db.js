@@ -582,7 +582,7 @@ function getGroupAwards() {
 
   return {
     rei_exato:        top(stats, 'exactScores'),
-    maior_streak:     top(stats.map(s => ({ ...s, _streak: s.currentStreak || s.bestStreak })), '_streak'),
+    maior_streak:     top(stats.map(s => ({ ...s, _streak: s.bestStreak })), '_streak'),
     mais_consistente: (() => {
       const eligible = stats.filter(s => s.accuracy >= 0).sort((a, b) => b.accuracy - a.accuracy);
       return eligible[0]?.accuracy > 0 ? eligible[0] : null;
