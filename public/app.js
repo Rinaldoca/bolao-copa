@@ -489,7 +489,7 @@ async function loadLeaderboard() {
           <div style="display:flex;align-items:center;gap:8px;min-width:0">
             ${avatarHtml(p.name, p.id, 32)}
             <div style="min-width:0">
-              <div class="lb-name">${p.name}</div>
+              <div class="lb-name" style="display:flex;align-items:center;gap:6px">${p.name}${currentUser?.id === p.id ? `<span class="lb-me-badge">${t('lb_me')}</span>` : ''}</div>
               <div class="lb-bets">${p.total_bets} ${p.total_bets!==1?t('lb_bets_n'):t('lb_bets_1')}</div>
             </div>
           </div>

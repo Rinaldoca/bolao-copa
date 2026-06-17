@@ -23,6 +23,7 @@ const LANG_DATA = {
     lb_col_pts: 'Pts',
     lb_bets_1: 'palpite',
     lb_bets_n: 'palpites',
+    lb_me: 'Você',
 
     // Rules
     rules_title: '📋 Como funciona o bolão',
@@ -334,6 +335,7 @@ const LANG_DATA = {
     lb_col_pts: 'Pts',
     lb_bets_1: 'bet',
     lb_bets_n: 'bets',
+    lb_me: 'You',
 
     // Rules
     rules_title: '📋 How the pool works',
