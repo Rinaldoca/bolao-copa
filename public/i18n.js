@@ -111,6 +111,8 @@ const LANG_DATA = {
     badge_open: 'Aberto',
     badge_closing: 'Em breve',
     badge_finished: 'Encerrado',
+    badge_tbd: 'A definir',
+    tbd_bet_msg: '⏳ Times ainda não definidos',
 
     // Match card
     bet_label: 'Palpite:',
@@ -422,6 +424,8 @@ const LANG_DATA = {
     badge_open: 'Open',
     badge_closing: 'Closing soon',
     badge_finished: 'Finished',
+    badge_tbd: 'TBD',
+    tbd_bet_msg: '⏳ Teams not decided yet',
 
     // Match card
     bet_label: 'Bet:',

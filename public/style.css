@@ -361,6 +361,7 @@ main { max-width: 860px; margin: 0 auto; padding: 28px 20px 60px; }
 .match-card.has-bet  { border-left: 3px solid var(--gold); }
 .match-card.needs-bet{ border-left: 3px solid var(--blue); }
 .match-card.finished { border-left: 3px solid var(--border2); opacity: .88; }
+.match-card.tbd      { border-left: 3px dashed var(--border2); opacity: .6; }
 
 /* Meta strip */
 .match-meta {
@@ -376,6 +377,7 @@ main { max-width: 860px; margin: 0 auto; padding: 28px 20px 60px; }
 .badge-open     { background: var(--gold-glow);  color: var(--gold); border: 1px solid rgba(0,156,59,.2); }
 .badge-closed   { background: var(--surface3);   color: var(--text-3); }
 .badge-finished { background: var(--green-dim);  color: var(--green); border: 1px solid rgba(230,168,0,.2); }
+.badge-tbd      { background: var(--surface3);   color: var(--text-3); border: 1px dashed var(--border2); }
 
 /* Teams row */
 .match-teams {

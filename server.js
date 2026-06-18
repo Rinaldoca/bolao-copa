@@ -223,7 +223,9 @@ app.post('/api/admin/generate-bracket', (req, res) => {
   if (!auth(req.body.password)) return res.status(403).json({ error: 'Senha incorreta' });
   try {
     const standings = db.buildGroupStandingsServer();
-    const matches   = generateKnockout(standings);
+    const groupMatches = db.getMatches().filter(m => m.stage === 'Fase de Grupos');
+    const groupStageComplete = groupMatches.length > 0 && groupMatches.every(m => m.status === 'finished');
+    const matches   = generateKnockout(standings, groupStageComplete);
     const result    = db.upsertKnockoutMatches(matches);
     res.json({ ok: true, ...result });
   } catch (err) {

@@ -279,8 +279,11 @@ function bestThird(groups, allowed) {
     .sort((a, b) => (b.Pts - a.Pts) || ((b.GP - b.GC) - (a.GP - a.GC)) || (b.GP - a.GP))[0]?.team || 'A definir';
 }
 
-function generateKnockout(groupStandings) {
+function generateKnockout(groupStandings, resolveTeams = false) {
   const g = groupStandings;
+  // Only resolve real teams once the group stage is complete; otherwise the
+  // bracket would show premature/incorrect matchups from partial standings.
+  const r32 = (team) => resolveTeams ? team : 'A definir';
 
   const round32 = [
     { date:'2026-06-28T22:00:00Z', home:s(g,'A',1), away:s(g,'B',1),                           venue:'Los Angeles' },
@@ -299,7 +302,7 @@ function generateKnockout(groupStandings) {
     { date:'2026-07-03T17:00:00Z', home:s(g,'J',0), away:s(g,'H',1),                           venue:'Miami' },
     { date:'2026-07-03T20:00:00Z', home:s(g,'K',0), away:bestThird(g,['D','E','I','J','L']),   venue:'Kansas City' },
     { date:'2026-07-03T23:00:00Z', home:s(g,'D',1), away:s(g,'G',1),                           venue:'Dallas' },
-  ].map(m => ({ api_match_id: null, home_team: m.home, away_team: m.away,
+  ].map(m => ({ api_match_id: null, home_team: r32(m.home), away_team: r32(m.away),
                 match_date: m.date, stage: '32 avos de Final', venue: m.venue }));
 
   // Later rounds: teams unknown until the bracket fills in.

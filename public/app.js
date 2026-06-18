@@ -772,7 +772,9 @@ function renderBracketCard(m) {
   const tbd       = m.home_team === 'A definir' || m.away_team === 'A definir';
 
   let betLine = '';
-  if (finished && myBet) {
+  if (tbd) {
+    betLine = `<div class="bracket-bet" style="color:var(--text-3);font-size:.72rem">${t('tbd_bet_msg')}</div>`;
+  } else if (finished && myBet) {
     const cls   = myBet.points===3 ? 'pts-3' : myBet.points===1 ? 'pts-1' : 'pts-0';
     const emoji = myBet.points===3 ? '🎯' : myBet.points===1 ? '✅' : '❌';
     betLine = `<div class="bracket-bet"><span class="pts-chip ${cls}" style="font-size:.7rem;padding:2px 7px">${myBet.home_score}-${myBet.away_score} · ${myBet.points}pt ${emoji}</span></div>`;
@@ -798,13 +800,13 @@ function renderBracketCard(m) {
   }
 
   return `
-    <div class="bracket-card ${finished ? 'finished' : ''} ${!finished && !isPast && myBet && !tbd ? 'bracket-has-bet' : ''} ${!finished && !isPast && !myBet && currentUser && !tbd ? 'bracket-needs-bet' : ''}">
+    <div class="bracket-card ${finished ? 'finished' : ''} ${tbd ? 'bracket-card-tbd' : ''} ${!finished && !isPast && myBet && !tbd ? 'bracket-has-bet' : ''} ${!finished && !isPast && !myBet && currentUser && !tbd ? 'bracket-needs-bet' : ''}">
       <div class="bracket-team ${homeWon ? 'winner' : finished ? 'loser' : ''}">
-        ${flag(m.home_team)}<span class="bracket-team-name">${m.home_team}</span>
+        ${flag(m.home_team)}<span class="bracket-team-name">${m.home_team === 'A definir' ? t('bracket_tbd') : m.home_team}</span>
         ${finished ? `<span class="bracket-team-score">${m.home_score}</span>` : ''}
       </div>
       <div class="bracket-team ${awayWon ? 'winner' : finished ? 'loser' : ''}">
-        ${flag(m.away_team)}<span class="bracket-team-name">${m.away_team}</span>
+        ${flag(m.away_team)}<span class="bracket-team-name">${m.away_team === 'A definir' ? t('bracket_tbd') : m.away_team}</span>
         ${finished ? `<span class="bracket-team-score">${m.away_score}</span>` : ''}
       </div>
       <div class="bracket-meta">${dateShort}${m.venue ? ` · ${m.venue}` : ''}</div>
@@ -1409,15 +1411,17 @@ function startCountdownTimer() {
 function renderMatchCard(m) {
   const bet      = userBets[m.id];
   const finished = m.status === 'finished';
+  const tbd      = !finished && (m.home_team === 'A definir' || m.away_team === 'A definir');
   const matchDate = new Date(m.match_date);
   const isPast   = Date.now() > matchDate.getTime() - 5 * 60 * 1000;
   const msLeft   = matchDate.getTime() - Date.now();
-  const showCountdown = !finished && msLeft > 0 && msLeft < 48 * 60 * 60 * 1000;
+  const showCountdown = !finished && !tbd && msLeft > 0 && msLeft < 48 * 60 * 60 * 1000;
 
   const dateStr = matchDate.toLocaleDateString(dateLocale(), { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', timeZone:'Europe/Berlin' });
 
   let badge;
   if (finished)     badge = `<span class="badge badge-finished">${t('badge_finished')}</span>`;
+  else if (tbd)     badge = `<span class="badge badge-tbd">${t('badge_tbd')}</span>`;
   else if (isPast)  badge = `<span class="badge badge-closed">${t('badge_closing')}</span>`;
   else              badge = `<span class="badge badge-open">${t('badge_open')}</span>`;
 
@@ -1426,7 +1430,9 @@ function renderMatchCard(m) {
     : `<div class="vs-block"><span class="vs-label">VS</span></div>`;
 
   let betBar;
-  if (finished) {
+  if (tbd) {
+    betBar = `<div class="bet-bar"><span class="no-bet-msg">${t('tbd_bet_msg')}</span></div>`;
+  } else if (finished) {
     const pts = bet?.points ?? null;
     const chipClass = pts === 3 ? 'pts-3' : pts === 1 ? 'pts-1' : pts === 0 ? 'pts-0' : 'pts-none';
     const emoji     = pts === 3 ? '🎯' : pts === 1 ? '✅' : pts === 0 ? '❌' : '';
@@ -1475,7 +1481,7 @@ function renderMatchCard(m) {
     : '';
 
   return `
-    <div id="match-${m.id}" class="match-card ${finished?'finished':''} ${bet!==undefined&&!finished?'has-bet':''} ${!finished&&!isPast&&bet===undefined&&currentUser?'needs-bet':''}">
+    <div id="match-${m.id}" class="match-card ${finished?'finished':''} ${tbd?'tbd':''} ${bet!==undefined&&!finished?'has-bet':''} ${!finished&&!tbd&&!isPast&&bet===undefined&&currentUser?'needs-bet':''}">
       <div class="match-meta">
         <span>📅 ${dateStr}${m.venue ? ` · 📍 ${m.venue}` : ''}</span>
         ${badge}
