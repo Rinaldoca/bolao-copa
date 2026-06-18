@@ -246,7 +246,7 @@ app.get('/api/match-stats',  (req, res) => res.json(db.getMatchStats()));
 async function backupToGist() {
   const token  = process.env.GIST_TOKEN;
   const gistId = process.env.GIST_ID;
-  if (!token || !gistId) return;
+  if (!token || !gistId) return { ok: false, error: 'GIST_TOKEN/GIST_ID não configurados no servidor' };
   try {
     const content = fs.readFileSync(path.join(DATA_DIR, 'bolao.json'), 'utf8');
     const body    = JSON.stringify({ files: { 'bolao.json': { content } } });
@@ -277,7 +277,11 @@ async function backupToGist() {
       req.write(body);
       req.end();
     });
-  } catch (err) { console.error('[backup]', err.message); }
+    return { ok: true };
+  } catch (err) {
+    console.error('[backup]', err.message);
+    return { ok: false, error: err.message };
+  }
 }
 
 setInterval(backupToGist, 60 * 60 * 1000);
@@ -293,12 +297,9 @@ app.post('/api/admin/reassign-match-id', (req, res) => {
 
 app.post('/api/admin/backup', async (req, res) => {
   if (!auth(req.body.password)) return res.status(403).json({ error: 'Senha incorreta' });
-  try {
-    await backupToGist();
-    res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ ok: false, error: err.message });
-  }
+  const result = await backupToGist();
+  if (!result.ok) return res.status(502).json(result);
+  res.json(result);
 });
 
 app.get('/api/admin/download', (req, res) => {
