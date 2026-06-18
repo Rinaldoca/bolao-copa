@@ -624,6 +624,26 @@ const LANG_DATA = {
     admin_pwd_hint: 'Enter the admin password to continue.',
     admin_pwd_placeholder: 'Admin password',
     admin_enter: 'Enter',
+
+    // Country / team names (canonical key = Portuguese name as stored in data)
+    teams: {
+      'Alemanha': 'Germany',          'Argentina': 'Argentina',       'Argélia': 'Algeria',
+      'Arábia Saudita': 'Saudi Arabia','Austrália': 'Australia',       'Brasil': 'Brazil',
+      'Bélgica': 'Belgium',           'Bósnia': 'Bosnia',             'Cabo Verde': 'Cape Verde',
+      'Canadá': 'Canada',             'Catar': 'Qatar',               'Colômbia': 'Colombia',
+      'Congo RD': 'DR Congo',         'Coreia do Sul': 'South Korea', 'Costa do Marfim': 'Ivory Coast',
+      'Croácia': 'Croatia',           'Curaçao': 'Curaçao',           'EUA': 'USA',
+      'Egito': 'Egypt',               'Equador': 'Ecuador',           'Escócia': 'Scotland',
+      'Espanha': 'Spain',             'França': 'France',             'Gana': 'Ghana',
+      'Haiti': 'Haiti',               'Holanda': 'Netherlands',       'Inglaterra': 'England',
+      'Iraque': 'Iraq',               'Irã': 'Iran',                  'Japão': 'Japan',
+      'Jordânia': 'Jordan',           'Marrocos': 'Morocco',          'México': 'Mexico',
+      'Noruega': 'Norway',            'Nova Zelândia': 'New Zealand', 'Panamá': 'Panama',
+      'Paraguai': 'Paraguay',         'Portugal': 'Portugal',         'Senegal': 'Senegal',
+      'Suécia': 'Sweden',             'Suíça': 'Switzerland',         'Tchéquia': 'Czechia',
+      'Tunísia': 'Tunisia',           'Turquia': 'Türkiye',           'Uruguai': 'Uruguay',
+      'Uzbequistão': 'Uzbekistan',    'África do Sul': 'South Africa','Áustria': 'Austria',
+    },
   },
 };
 
@@ -663,6 +683,12 @@ const _STAGE_SHORT_KEYS = {
 
 function tStage(name)      { const k = _STAGE_KEYS[name];       return k ? t(k) : name; }
 function tStageShort(name) { const k = _STAGE_SHORT_KEYS[name]; return k ? t(k) : name; }
+function tTeam(name) {
+  if (!name) return '';
+  if (name === 'A definir') return t('bracket_tbd');
+  const dict = LANG_DATA[_lang] || LANG_DATA.pt;
+  return (dict.teams && dict.teams[name]) || name;
+}
 function dateLocale()      { return t('date_locale'); }
 function getCurrentLang()  { return _lang; }
 

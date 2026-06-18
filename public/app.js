@@ -26,7 +26,7 @@ function renderChampionPicker(currentValue) {
     <div class="cp-wrap" id="cp-wrap">
       <button type="button" class="cp-btn" id="cp-btn" onclick="cpToggle(event)">
         <span class="cp-value" id="cp-value">
-          ${team ? `<span class="cp-flag">${team.f}</span><span>${team.n}</span>` : `<span class="cp-placeholder">${t('cp_placeholder')}</span>`}
+          ${team ? `<span class="cp-flag">${team.f}</span><span>${tTeam(team.n)}</span>` : `<span class="cp-placeholder">${t('cp_placeholder')}</span>`}
         </span>
         <span class="cp-arrow" id="cp-arrow">▾</span>
       </button>
@@ -36,9 +36,9 @@ function renderChampionPicker(currentValue) {
         </div>
         <div class="cp-list" id="cp-list">
           ${WC2026_TEAMS.map(t => `
-            <div class="cp-item ${currentValue===t.n?'cp-selected':''}" data-name="${t.n}" onclick="cpSelect('${t.n.replace(/'/g,"&#39;")}')">
+            <div class="cp-item ${currentValue===t.n?'cp-selected':''}" data-name="${t.n}" data-label="${tTeam(t.n).replace(/"/g,'&quot;')}" onclick="cpSelect('${t.n.replace(/'/g,"&#39;")}')">
               <span class="cp-flag">${t.f}</span>
-              <span class="cp-name">${t.n}</span>
+              <span class="cp-name">${tTeam(t.n)}</span>
               ${currentValue===t.n?'<span class="cp-check">✓</span>':''}
             </div>`).join('')}
         </div>
@@ -57,10 +57,11 @@ function cpToggle(e) {
 }
 
 function cpFilter(q) {
-  const lq = q.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+  const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+  const lq = norm(q);
   document.querySelectorAll('.cp-item').forEach(el => {
-    const name = el.dataset.name.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
-    el.style.display = name.includes(lq) ? '' : 'none';
+    const matches = norm(el.dataset.name).includes(lq) || norm(el.dataset.label).includes(lq);
+    el.style.display = matches ? '' : 'none';
   });
 }
 
@@ -68,7 +69,7 @@ function cpSelect(name) {
   _champPickerSelected = name;
   const team = WC2026_TEAMS.find(t => t.n === name);
   const valueEl = document.getElementById('cp-value');
-  if (valueEl && team) valueEl.innerHTML = `<span class="cp-flag">${team.f}</span><span>${team.n}</span>`;
+  if (valueEl && team) valueEl.innerHTML = `<span class="cp-flag">${team.f}</span><span>${tTeam(team.n)}</span>`;
   document.querySelectorAll('.cp-item').forEach(el => {
     const sel = el.dataset.name === name;
     el.classList.toggle('cp-selected', sel);
@@ -113,8 +114,8 @@ let allMatches     = [];
 let userBets       = {};
 let matchBetsCache = {};
 let expandedBets   = new Set();
-let statusFilter      = 'all';
-let stageFilter       = 'all';
+let statusFilter      = localStorage.getItem('bolao_statusFilter') || 'all';
+let stageFilter       = localStorage.getItem('bolao_stageFilter')  || 'all';
 let showUnbettedOnly  = false;
 let lbStageFilter  = null;
 let _diffStageFilter = null;
@@ -163,6 +164,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (saved) setUser(JSON.parse(saved), false);
   } catch {}
   loadAll();
+  // Restore the last-visited tab (defaults to leaderboard if none saved).
+  const savedTab = localStorage.getItem('bolao_tab');
+  if (savedTab && _PERSISTED_TABS.includes(savedTab)) showTab(savedTab);
   // Delegated handler for group collapse buttons (avoids inline-onclick quoting issues)
   document.getElementById('matches-container').addEventListener('click', e => {
     const btn = e.target.closest('.group-header');
@@ -208,12 +212,16 @@ async function api(url, method = 'GET', body = null) {
 }
 
 /* ─── Tabs ───────────────────────────────────────────────────────────────── */
+// Tabs worth remembering across reloads (transient views like compare/admin are not).
+const _PERSISTED_TABS = ['leaderboard', 'matches', 'bracket', 'me'];
+
 function showTab(name) {
   document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
   document.querySelectorAll('.tab, .bnav-tab').forEach(el => el.classList.remove('active'));
   document.getElementById(`tab-${name}`).classList.remove('hidden');
   document.querySelector(`.tab[data-tab="${name}"]`)?.classList.add('active');
   document.querySelector(`.bnav-tab[data-tab="${name}"]`)?.classList.add('active');
+  if (_PERSISTED_TABS.includes(name)) localStorage.setItem('bolao_tab', name);
   if (name === 'leaderboard') { loadLeaderboard(); loadSpecialAndFeed(); }
   if (name === 'bracket')     renderBracketTab();
   if (name === 'matches')     loadMatches();
@@ -287,7 +295,7 @@ async function openPlayerModal(userId, name) {
     const chipLabel = finished ? `${b.points}pt` : '—';
     const score = finished ? `<span style="color:var(--text-3);font-size:.78rem">${m.home_score}×${m.away_score}</span>` : '';
     return `<div class="player-bet-row">
-      <div class="player-bet-match">${_flagMap[m.home_team]||''} ${m.home_team} <span style="color:var(--text-3)">×</span> ${m.away_team} ${_flagMap[m.away_team]||''} ${score}</div>
+      <div class="player-bet-match">${_flagMap[m.home_team]||''} ${tTeam(m.home_team)} <span style="color:var(--text-3)">×</span> ${tTeam(m.away_team)} ${_flagMap[m.away_team]||''} ${score}</div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
         <span style="font-weight:700">${b.home_score}×${b.away_score}</span>
         <span class="pts-chip ${chipClass}">${chipLabel}</span>
@@ -322,7 +330,7 @@ async function openPlayerModal(userId, name) {
         const outcome = myPtsR > thPtsR ? 'win' : myPtsR < thPtsR ? 'loss' : 'draw';
         const chip = p => `<span class="pts-chip ${p===3?'pts-3':p===1?'pts-1':'pts-0'}">${p}pt</span>`;
         return `<div class="h2h-row">
-          <div class="h2h-match">${_flagMap[m.home_team]||''} ${m.home_team} ${m.home_score}×${m.away_score} ${m.away_team} ${_flagMap[m.away_team]||''}</div>
+          <div class="h2h-match">${_flagMap[m.home_team]||''} ${tTeam(m.home_team)} ${m.home_score}×${m.away_score} ${tTeam(m.away_team)} ${_flagMap[m.away_team]||''}</div>
           <div class="h2h-bets">
             <span class="h2h-bet-me">${myB.home_score}×${myB.away_score} ${chip(myPtsR)}</span>
             <span class="h2h-vs">vs</span>
@@ -363,7 +371,7 @@ async function openPlayerModal(userId, name) {
       </div>
     </div>
     ${champBet || scorerBet ? `<div style="padding:10px 20px;border-bottom:1px solid var(--border);display:flex;gap:16px;flex-wrap:wrap">
-      ${champBet ? `<div><div style="font-size:.7rem;color:var(--text-3);margin-bottom:2px">${t('pm_champion')}</div><div style="font-weight:700${champWon?' ;color:var(--gold)':''}">${champBet.team}${champWon?' ✓':''}</div></div>` : ''}
+      ${champBet ? `<div><div style="font-size:.7rem;color:var(--text-3);margin-bottom:2px">${t('pm_champion')}</div><div style="font-weight:700${champWon?' ;color:var(--gold)':''}">${tTeam(champBet.team)}${champWon?' ✓':''}</div></div>` : ''}
       ${scorerBet ? `<div><div style="font-size:.7rem;color:var(--text-3);margin-bottom:2px">${t('pm_scorer')}</div><div style="font-weight:700${scorerWon?';color:var(--gold)':''}">${scorerBet.name}${scorerWon?' ✓':''}</div></div>` : ''}
     </div>` : ''}
     <div style="padding:8px 20px 16px">
@@ -550,7 +558,7 @@ function renderTeamStats(bets, matchMap, el) {
     const pct = Math.round(s.acc * 100);
     return `<div class="team-stat-row">
       <span class="team-stat-flag">${_flagMap[s.team]||''}</span>
-      <span class="team-stat-name">${s.team}</span>
+      <span class="team-stat-name">${tTeam(s.team)}</span>
       <div class="team-stat-bar-wrap"><div class="team-stat-bar-fill" style="width:${pct}%"></div></div>
       <span class="team-stat-pct">${pct}%</span>
     </div>`;
@@ -626,7 +634,7 @@ function standingsRow(row, i, extraCells = '') {
   const sg = row.GP - row.GC;
   return `<tr class="${i < 2 ? 'classified' : i === 2 ? 'possible' : ''}">
     <td class="td-pos">${i + 1}</td>
-    <td class="td-team">${flag(row.team)}${row.team}</td>
+    <td class="td-team">${flag(row.team)}${tTeam(row.team)}</td>
     ${extraCells}
     <td>${row.J}</td><td>${row.V}</td><td>${row.E}</td><td>${row.D}</td>
     <td>${row.GP}</td><td>${row.GC}</td>
@@ -696,7 +704,7 @@ function renderThirdsRanking() {
             const rowClass = i < 8 ? 'classified' : 'eliminated';
             return `<tr class="${rowClass}">
               <td class="td-pos">${i + 1}</td>
-              <td class="td-team">${flag(row.team)}${row.team}</td>
+              <td class="td-team">${flag(row.team)}${tTeam(row.team)}</td>
               <td style="color:var(--text-3);font-size:.78rem">${row.group}</td>
               <td>${row.J}</td><td>${row.V}</td><td>${row.E}</td><td>${row.D}</td>
               <td>${row.GP}</td><td>${row.GC}</td>
@@ -802,11 +810,11 @@ function renderBracketCard(m) {
   return `
     <div class="bracket-card ${finished ? 'finished' : ''} ${tbd ? 'bracket-card-tbd' : ''} ${!finished && !isPast && myBet && !tbd ? 'bracket-has-bet' : ''} ${!finished && !isPast && !myBet && currentUser && !tbd ? 'bracket-needs-bet' : ''}">
       <div class="bracket-team ${homeWon ? 'winner' : finished ? 'loser' : ''}">
-        ${flag(m.home_team)}<span class="bracket-team-name">${m.home_team === 'A definir' ? t('bracket_tbd') : m.home_team}</span>
+        ${flag(m.home_team)}<span class="bracket-team-name">${tTeam(m.home_team)}</span>
         ${finished ? `<span class="bracket-team-score">${m.home_score}</span>` : ''}
       </div>
       <div class="bracket-team ${awayWon ? 'winner' : finished ? 'loser' : ''}">
-        ${flag(m.away_team)}<span class="bracket-team-name">${m.away_team === 'A definir' ? t('bracket_tbd') : m.away_team}</span>
+        ${flag(m.away_team)}<span class="bracket-team-name">${tTeam(m.away_team)}</span>
         ${finished ? `<span class="bracket-team-score">${m.away_score}</span>` : ''}
       </div>
       <div class="bracket-meta">${dateShort}${m.venue ? ` · ${m.venue}` : ''}</div>
@@ -1007,7 +1015,7 @@ function renderSpecialGrid(special, containerId) {
     const won = resultVal && val?.toLowerCase() === resultVal.toLowerCase();
     if (val) return `<div class="special-my-pick">
       <div class="smp-label">${t('special_your_pick')}</div>
-      <div class="smp-val">${val}${won ? ' ✓' : ''}</div>
+      <div class="smp-val">${tTeam(val)}${won ? ' ✓' : ''}</div>
       ${champOpen && !resultVal ? `<button class="btn btn-ghost btn-sm smp-change" onclick="showTab('me')">${t('special_change')}</button>` : ''}
     </div>`;
     if (!champOpen) return '';
@@ -1026,7 +1034,7 @@ function renderSpecialGrid(special, containerId) {
       const val = getVal(b);
       const won = resultVal && val?.toLowerCase() === resultVal.toLowerCase();
       return `<div class="special-bet-row">
-        <div><span class="special-user">${b.user_name}</span><br><span class="special-pick">${val}</span></div>
+        <div><span class="special-user">${b.user_name}</span><br><span class="special-pick">${tTeam(val)}</span></div>
         <div class="special-pts ${won ? 'won' : resultVal ? 'lost' : ''}">
           ${won ? `✓ +${pts}pts` : resultVal ? '—' : ''}
         </div>
@@ -1041,7 +1049,7 @@ function renderSpecialGrid(special, containerId) {
     <div class="special-card">
       <div class="special-card-title">${t('special_champion')}</div>
       ${statusBadge}
-      ${champResult ? `<div class="special-card-result">✓ ${champResult}</div>` : ''}
+      ${champResult ? `<div class="special-card-result">✓ ${tTeam(champResult)}</div>` : ''}
       ${myPickBlock(myChampBet,  getChampVal,  champResult)}
       ${renderRows(champBets,  myChampBet,  champResult,  getChampVal,  10)}
     </div>
@@ -1089,7 +1097,7 @@ function renderFeed(feed) {
       return `<div class="feed-entry">
         <div class="feed-header">
           <div>
-            <div class="feed-title">${hFlag} ${entry.home_team} <span class="feed-score">${entry.home_score}–${entry.away_score}</span> ${entry.away_team} ${aFlag}</div>
+            <div class="feed-title">${hFlag} ${tTeam(entry.home_team)} <span class="feed-score">${entry.home_score}–${entry.away_score}</span> ${tTeam(entry.away_team)} ${aFlag}</div>
             <div class="feed-meta" title="${fmtDate(entry.timestamp)}">${match ? tStage(match.stage) + ' · ' : ''}${timeAgo(entry.timestamp)}</div>
           </div>
           ${summary ? `<div class="feed-summary">${summary}</div>` : ''}
@@ -1108,7 +1116,7 @@ function renderFeed(feed) {
         </div>`).join('');
       return `<div class="feed-entry">
         <div class="feed-header">
-          <div><div class="feed-title">🏆 ${entry.team}</div><div class="feed-meta" title="${fmtDate(entry.timestamp)}">${timeAgo(entry.timestamp)}</div></div>
+          <div><div class="feed-title">🏆 ${tTeam(entry.team)}</div><div class="feed-meta" title="${fmtDate(entry.timestamp)}">${timeAgo(entry.timestamp)}</div></div>
           ${total > 0 ? `<div class="feed-summary">${got}/${total} ${getCurrentLang()==='en'?'got it right':'acertaram'}</div>` : ''}
         </div>
         <button class="all-bets-toggle" onclick="const s=this.nextElementSibling;const open=s.style.display==='';s.style.display=open?'none':'';this.textContent=(open?'▼ ':'▲ ')+'${getCurrentLang()==='en'?`See picks (${total})`:`Ver palpites (${total})`}'">▼ ${getCurrentLang()==='en'?`See picks (${total})`:`Ver palpites (${total})`}</button>
@@ -1150,6 +1158,7 @@ async function loadMatches() {
     document.getElementById('matches-user-hint').textContent = '';
   }
   buildStagePills();
+  syncStatusPills();
   renderMatches();
   updatePendingBadge();
 }
@@ -1241,13 +1250,23 @@ function toggleGroup(key) {
 
 function setStatusFilter(f, btn) {
   statusFilter = f;
+  localStorage.setItem('bolao_statusFilter', f);
   document.querySelectorAll('#status-pills .pill').forEach(p => p.classList.remove('active'));
   btn.classList.add('active');
   renderMatches();
 }
 
+// Reflect the persisted statusFilter on the (static) status pills after a reload.
+function syncStatusPills() {
+  const map = { all: 0, upcoming: 1, finished: 2 };
+  const pills = document.querySelectorAll('#status-pills .pill');
+  pills.forEach(p => p.classList.remove('active'));
+  pills[map[statusFilter] ?? 0]?.classList.add('active');
+}
+
 function setStageFilter(f, btn) {
   stageFilter = f;
+  localStorage.setItem('bolao_stageFilter', f);
   document.querySelectorAll('#stage-pills-row .pill').forEach(p => p.classList.remove('active'));
   btn.classList.add('active');
   renderMatches();
@@ -1273,7 +1292,7 @@ function renderNextBetCard() {
   el.innerHTML = `<div class="nbc${ms < 3600000 ? ' urgent' : ''}">
     <div>
       <div class="nbc-label">⚡ ${t('next_bet_title')} (${candidates.length})</div>
-      <div class="nbc-match">${_flagMap[next.home_team]||''} ${next.home_team} × ${next.away_team} ${_flagMap[next.away_team]||''}</div>
+      <div class="nbc-match">${_flagMap[next.home_team]||''} ${tTeam(next.home_team)} × ${tTeam(next.away_team)} ${_flagMap[next.away_team]||''}</div>
       <div class="nbc-time">${t('next_bet_closes')} ${fmtCountdown(ms)}</div>
     </div>
     <button class="btn btn-primary btn-sm" onclick="scrollToMatch(${next.id})">${t('next_bet_btn')} →</button>
@@ -1489,13 +1508,13 @@ function renderMatchCard(m) {
       </div>
       <div class="match-teams">
         <div class="team home">
-          <span class="t-name">${m.home_team}</span>
+          <span class="t-name">${tTeam(m.home_team)}</span>
           <span class="t-flag">${_flagMap[m.home_team]||''}</span>
         </div>
         ${vsBlock}
         <div class="team away">
           <span class="t-flag">${_flagMap[m.away_team]||''}</span>
-          <span class="t-name">${m.away_team}</span>
+          <span class="t-name">${tTeam(m.away_team)}</span>
         </div>
       </div>
       ${betBar}
@@ -1898,7 +1917,7 @@ function renderMatchDifficulty(stats) {
   function matchRow(m) {
     const correctPct = Math.round(m.correctPct * 100);
     const exactPct   = Math.round(m.exactPct   * 100);
-    const flag = `${_flagMap[m.home_team]||''} ${m.home_team} ${m.home_score}×${m.away_score} ${m.away_team} ${_flagMap[m.away_team]||''}`;
+    const flag = `${_flagMap[m.home_team]||''} ${tTeam(m.home_team)} ${m.home_score}×${m.away_score} ${tTeam(m.away_team)} ${_flagMap[m.away_team]||''}`;
     return `<div class="diff-row diff-${diffClass(m.correctPct)}">
       <div class="diff-match">${flag}</div>
       <div class="diff-bars">
@@ -1989,9 +2008,9 @@ async function loadMyPage() {
   document.getElementById('me-special').innerHTML = `
     <div class="special-card">
       <div class="special-card-title">${t('me_champ_title')}</div>
-      ${champResult ? (champWon ? `<div class="special-card-result">${t('me_correct', {pts:10})}</div>` : `<div class="special-card-closed">${t('me_wrong', {val:champResult})}</div>`) : ''}
+      ${champResult ? (champWon ? `<div class="special-card-result">${t('me_correct', {pts:10})}</div>` : `<div class="special-card-closed">${t('me_wrong', {val:tTeam(champResult)})}</div>`) : ''}
       ${champBet
-        ? `<div style="font-weight:700;margin-bottom:${isOpen&&!champResult?'8':'0'}px">${champBet.team}</div>`
+        ? `<div style="font-weight:700;margin-bottom:${isOpen&&!champResult?'8':'0'}px">${tTeam(champBet.team)}</div>`
         : `<div style="color:var(--text-3);font-size:.85rem;margin-bottom:${isOpen?'8':'0'}px">${t('me_no_bet_placed')}</div>`}
       ${isOpen && !champResult ? `
         <div class="special-input-row">
@@ -2088,7 +2107,7 @@ async function loadAdminBetSelects() {
   mSel.innerHTML = '<option value="">Selecione a partida...</option>' +
     (matches||[]).map(m => {
       const d = new Date(m.match_date).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Berlin'});
-      return `<option value="${m.id}">${m.home_team} × ${m.away_team} (${d})</option>`;
+      return `<option value="${m.id}">${tTeam(m.home_team)} × ${tTeam(m.away_team)} (${d})</option>`;
     }).join('');
 }
 
@@ -2158,7 +2177,7 @@ async function loadAdminMatches() {
     const isFinished = m.status === 'finished';
     return `<div class="admin-match-item" id="ami-${m.id}">
       <div class="admin-match-info">
-        <div class="admin-match-name">${m.home_team} × ${m.away_team}</div>
+        <div class="admin-match-name">${tTeam(m.home_team)} × ${tTeam(m.away_team)}</div>
         <div class="admin-match-meta">${dateStr}${m.venue?' · '+m.venue:''} · ${m.stage}${m.group_name?' G'+m.group_name:''}</div>
       </div>
       ${isFinished
@@ -2579,7 +2598,7 @@ async function renderComparison(idA, idB) {
         <span class="cmp-score">${ba.home_score}×${ba.away_score}</span>${chip(pa)}
       </div>
       <div class="cmp-match-info">
-        <div class="cmp-match-teams">${_flagMap[m.home_team]||''} ${m.home_team} <span class="cmp-result">${m.home_score}×${m.away_score}</span> ${m.away_team} ${_flagMap[m.away_team]||''}</div>
+        <div class="cmp-match-teams">${_flagMap[m.home_team]||''} ${tTeam(m.home_team)} <span class="cmp-result">${m.home_score}×${m.away_score}</span> ${tTeam(m.away_team)} ${_flagMap[m.away_team]||''}</div>
         <div class="cmp-match-stage">${tStage(m.stage)}</div>
       </div>
       <div class="cmp-match-bet cmp-bet-b">
