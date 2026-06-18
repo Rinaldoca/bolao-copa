@@ -2303,10 +2303,10 @@ async function adminImportKnockout() {
 }
 
 async function adminGenerateRound32() {
-  if (!confirm('Gerar os 32 jogos da fase de 32 avos com base na classificação atual dos grupos?\n\nIsso não apaga palpites existentes.')) return;
+  if (!confirm('Gerar o mata-mata completo (32 avos → Final) com base na classificação atual dos grupos?\n\nOs 32 avos usam os classificados; as fases seguintes ficam "A definir". Isso não apaga palpites existentes.')) return;
   const btn = event.target; btn.disabled = true; btn.textContent = '⟳ Gerando...';
-  const res = await api('/api/admin/generate-round32', 'POST', { password: adminPwd });
-  btn.disabled = false; btn.textContent = '⚡ Gerar 32 avos das classificações';
+  const res = await api('/api/admin/generate-bracket', 'POST', { password: adminPwd });
+  btn.disabled = false; btn.textContent = '⚡ Gerar mata-mata completo';
   if (res.error || !res.ok) { toast(res.error || 'Erro ao gerar', 'error'); return; }
   toast(`${res.added} partidas criadas, ${res.updated} atualizadas!`, 'success');
   allMatches = []; loadMatches(); renderBracketTab();

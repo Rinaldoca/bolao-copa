@@ -14,7 +14,7 @@ try {
 const DATA_DIR = process.env.DATA_DIR || __dirname;
 
 const db      = require('./db');
-const { syncMatches, importGroupStage, importKnockoutStage, generateRound32 } = require('./sync');
+const { syncMatches, importGroupStage, importKnockoutStage, generateKnockout } = require('./sync');
 
 const app = express();
 app.use(express.json());
@@ -219,11 +219,11 @@ app.post('/api/admin/import-knockout', async (req, res) => {
   }
 });
 
-app.post('/api/admin/generate-round32', (req, res) => {
+app.post('/api/admin/generate-bracket', (req, res) => {
   if (!auth(req.body.password)) return res.status(403).json({ error: 'Senha incorreta' });
   try {
     const standings = db.buildGroupStandingsServer();
-    const matches   = generateRound32(standings);
+    const matches   = generateKnockout(standings);
     const result    = db.upsertKnockoutMatches(matches);
     res.json({ ok: true, ...result });
   } catch (err) {

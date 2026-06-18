@@ -263,8 +263,10 @@ async function importKnockoutStage() {
   return { ok: true, ...result };
 }
 
-// ── Generate Round of 32 from group standings ─────────────────────────────────
-// Bracket structure per FIFA 2026 (games 73–88)
+// ── Generate the full knockout bracket from group standings ───────────────────
+// Bracket structure & dates per FIFA 2026 (28 Jun – 19 Jul). The Round of 32
+// resolves real teams from the current group standings; later rounds stay
+// "A definir" (TBD) until the bracket fills in.
 
 function s(groups, grp, pos) {
   return groups.find(g => g.name === grp)?.sorted[pos]?.team || 'A definir';
@@ -277,9 +279,10 @@ function bestThird(groups, allowed) {
     .sort((a, b) => (b.Pts - a.Pts) || ((b.GP - b.GC) - (a.GP - a.GC)) || (b.GP - a.GP))[0]?.team || 'A definir';
 }
 
-function generateRound32(groupStandings) {
+function generateKnockout(groupStandings) {
   const g = groupStandings;
-  return [
+
+  const round32 = [
     { date:'2026-06-28T22:00:00Z', home:s(g,'A',1), away:s(g,'B',1),                           venue:'Los Angeles' },
     { date:'2026-06-29T17:00:00Z', home:s(g,'E',0), away:bestThird(g,['A','B','C','D','F']),   venue:'Boston' },
     { date:'2026-06-29T20:00:00Z', home:s(g,'F',0), away:s(g,'C',1),                           venue:'Monterrey' },
@@ -298,6 +301,34 @@ function generateRound32(groupStandings) {
     { date:'2026-07-03T23:00:00Z', home:s(g,'D',1), away:s(g,'G',1),                           venue:'Dallas' },
   ].map(m => ({ api_match_id: null, home_team: m.home, away_team: m.away,
                 match_date: m.date, stage: '32 avos de Final', venue: m.venue }));
+
+  // Later rounds: teams unknown until the bracket fills in.
+  const tbd = [
+    // Oitavas de Final (Round of 16) — 4–7 July
+    { date:'2026-07-04T17:00:00Z', stage:'Oitavas de Final', venue:'Filadélfia' },
+    { date:'2026-07-04T21:00:00Z', stage:'Oitavas de Final', venue:'Houston' },
+    { date:'2026-07-05T17:00:00Z', stage:'Oitavas de Final', venue:'Cidade do México' },
+    { date:'2026-07-05T21:00:00Z', stage:'Oitavas de Final', venue:'Dallas' },
+    { date:'2026-07-06T17:00:00Z', stage:'Oitavas de Final', venue:'Atlanta' },
+    { date:'2026-07-06T21:00:00Z', stage:'Oitavas de Final', venue:'Seattle' },
+    { date:'2026-07-07T17:00:00Z', stage:'Oitavas de Final', venue:'Los Angeles' },
+    { date:'2026-07-07T21:00:00Z', stage:'Oitavas de Final', venue:'Nova York' },
+    // Quartas de Final — 9–11 July
+    { date:'2026-07-09T19:00:00Z', stage:'Quartas de Final',  venue:'Boston' },
+    { date:'2026-07-09T23:00:00Z', stage:'Quartas de Final',  venue:'Los Angeles' },
+    { date:'2026-07-11T19:00:00Z', stage:'Quartas de Final',  venue:'Kansas City' },
+    { date:'2026-07-11T23:00:00Z', stage:'Quartas de Final',  venue:'Miami' },
+    // Semifinal — 14–15 July
+    { date:'2026-07-14T23:00:00Z', stage:'Semifinal',         venue:'Dallas' },
+    { date:'2026-07-15T23:00:00Z', stage:'Semifinal',         venue:'Atlanta' },
+    // Terceiro Lugar — 18 July
+    { date:'2026-07-18T20:00:00Z', stage:'Terceiro Lugar',    venue:'Miami' },
+    // Final — 19 July
+    { date:'2026-07-19T19:00:00Z', stage:'Final',             venue:'Nova York' },
+  ].map(m => ({ api_match_id: null, home_team: 'A definir', away_team: 'A definir',
+                match_date: m.date, stage: m.stage, venue: m.venue }));
+
+  return [...round32, ...tbd];
 }
 
-module.exports = { syncMatches, importGroupStage, importKnockoutStage, generateRound32 };
+module.exports = { syncMatches, importGroupStage, importKnockoutStage, generateKnockout };
