@@ -28,7 +28,8 @@ function updatePendingBadge() {
   const now = new Date();
   const LOCK_MS = 5 * 60 * 1000;
   const open = allMatches.filter(m =>
-    m.status === 'upcoming' && new Date(m.match_date) - now > LOCK_MS
+    m.status === 'upcoming' && new Date(m.match_date) - now > LOCK_MS &&
+    m.home_team !== 'A definir' && m.away_team !== 'A definir'
   );
   const unbetted = open.filter(m => !userBets[m.id]).length;
   if (unbetted > 0) {
@@ -137,7 +138,8 @@ function renderNextBetCard() {
   const LOCK_MS = 5 * 60 * 1000;
   const now = Date.now();
   const candidates = allMatches
-    .filter(m => m.status === 'upcoming' && !userBets[m.id] && new Date(m.match_date).getTime() - now > LOCK_MS)
+    .filter(m => m.status === 'upcoming' && !userBets[m.id] && new Date(m.match_date).getTime() - now > LOCK_MS &&
+      m.home_team !== 'A definir' && m.away_team !== 'A definir')
     .sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
   if (!candidates.length) { el.innerHTML = ''; return; }
   const next = candidates[0];
