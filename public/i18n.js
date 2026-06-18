@@ -210,6 +210,9 @@ const LANG_DATA = {
     // History chart
     history_empty: 'Nenhum resultado registrado ainda.',
     history_no_participants: 'Nenhum participante ainda.',
+    hist_mode_points: 'Pontos',
+    hist_mode_rank: 'Posição',
+    hist_mode_gap: 'Atrás do líder',
 
     // Awards
     award_exact_king: 'Rei do Placar Exato',
@@ -523,6 +526,9 @@ const LANG_DATA = {
     // History chart
     history_empty: 'No results registered yet.',
     history_no_participants: 'No participants yet.',
+    hist_mode_points: 'Points',
+    hist_mode_rank: 'Rank',
+    hist_mode_gap: 'Behind leader',
 
     // Awards
     award_exact_king: 'Exact Score King',

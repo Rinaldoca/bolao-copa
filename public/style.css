@@ -884,6 +884,7 @@ select.input { cursor: pointer; }
 }
 .history-chart-wrap svg { display: block; }
 .history-chart-wrap .hc-empty { color: var(--text-3); font-size: .85rem; padding: 12px 0; }
+.hist-mode-pills { margin-bottom: 10px; }
 
 /* ─── Countdown ──────────────────────────────────────────────────────────── */
 .match-countdown {
