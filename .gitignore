@@ -1,4 +1,5 @@
 node_modules/
 bolao.json
 bolao.backup-*.json
+prod-backup-*.json
 .env
