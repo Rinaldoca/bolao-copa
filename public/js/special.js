@@ -112,13 +112,13 @@ function renderHistoryChart(history) {
     return `<text x="${x.toFixed(1)}" y="${H - 4}" text-anchor="middle" font-size="9" fill="var(--text-3)" transform="rotate(-35,${x.toFixed(1)},${H - 4})">${label}</text>`;
   }).join('');
 
-  // Emphasis: podium (top 3 by final pts) + the logged-in user
+  // Emphasis: top 7 by final pts + the logged-in user
   const finalS = series[series.length - 1];
   const finalRanked = [...userIds].filter(id => id in finalS).sort((a, b) => finalS[b] - finalS[a]);
-  const highlight = new Set(finalRanked.slice(0, 3));
+  const highlight = new Set(finalRanked.slice(0, 7));
   if (typeof currentUser !== 'undefined' && currentUser && (currentUser.id in finalS)) highlight.add(currentUser.id);
 
-  const COLORS = ['#FFD600', '#009C3B', '#2563eb', '#dc2626', '#7c3aed', '#f97316'];
+  const COLORS = ['#FFD600', '#009C3B', '#2563eb', '#dc2626', '#7c3aed', '#f97316', '#06b6d4', '#db2777', '#84cc16'];
   let ci = 0; const colorOf = {};
   finalRanked.forEach(id => { if (highlight.has(id)) { colorOf[id] = COLORS[ci % COLORS.length]; ci++; } });
 
