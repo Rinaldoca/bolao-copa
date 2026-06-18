@@ -149,10 +149,15 @@ async function syncMatches() {
         const home = comp.competitors?.find(c => c.homeAway === 'home');
         const away = comp.competitors?.find(c => c.homeAway === 'away');
         if (!home || !away) continue;
-        const key = `${isoDay(event.date)}|${normalize(home.team.displayName)}|${normalize(away.team.displayName)}`;
+        const homeNorm = normalize(home.team.displayName);
+        const awayNorm = normalize(away.team.displayName);
+        // Order-independent key: most WC games are at neutral venues, so the
+        // home/away orientation can differ between ESPN and our data.
+        const key = `${isoDay(event.date)}|${[homeNorm, awayNorm].sort().join('|')}`;
         espnLookup[key] = {
           statusName: comp.status?.type?.name,
           completed:  comp.status?.type?.completed,
+          homeNorm,
           homeScore:  parseInt(home.score),
           awayScore:  parseInt(away.score),
         };
@@ -168,7 +173,9 @@ async function syncMatches() {
   const notFoundMatches = [];
 
   for (const local of pending) {
-    const key = `${isoDay(local.match_date)}|${normalize(local.home_team)}|${normalize(local.away_team)}`;
+    const localHomeNorm = normalize(local.home_team);
+    const localAwayNorm = normalize(local.away_team);
+    const key = `${isoDay(local.match_date)}|${[localHomeNorm, localAwayNorm].sort().join('|')}`;
     const hit = espnLookup[key];
 
     if (!hit) {
@@ -179,7 +186,13 @@ async function syncMatches() {
     if (!ESPN_FINISHED.has(hit.statusName) && !hit.completed) { skipped++; continue; }
     if (isNaN(hit.homeScore) || isNaN(hit.awayScore)) { skipped++; continue; }
 
-    db.setMatchResult(local.id, hit.homeScore, hit.awayScore);
+    // ESPN may list the teams in the opposite order — map its scores onto our
+    // own home/away orientation so existing bets are graded correctly.
+    const sameOrder = localHomeNorm === hit.homeNorm;
+    const homeScore = sameOrder ? hit.homeScore : hit.awayScore;
+    const awayScore = sameOrder ? hit.awayScore : hit.homeScore;
+
+    db.setMatchResult(local.id, homeScore, awayScore);
     updated++;
   }
 
