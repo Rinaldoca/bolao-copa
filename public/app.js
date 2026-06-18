@@ -1654,9 +1654,10 @@ async function randomizeBets() {
   const open = allMatches.filter(m =>
     m.status === 'upcoming' &&
     now < new Date(m.match_date).getTime() - 5 * 60 * 1000 &&
+    m.home_team !== 'A definir' && m.away_team !== 'A definir' &&
     !userBets[m.id]
   );
-  if (!open.length) { toast(t('toast_no_open'), 'info'); return; }
+  if (!open.length) { _randomizing = false; toast(t('toast_no_open'), 'info'); return; }
 
   // Fill inputs for visible matches and save all
   let saved = 0;
