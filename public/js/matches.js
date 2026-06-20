@@ -43,30 +43,38 @@ function updatePendingBadge() {
 }
 
 function buildStagePills() {
+  const G_ROUNDS = ['1ª Rodada', '2ª Rodada', '3ª Rodada'];
   const stages = [...new Set(allMatches.map(m => m.stage))];
+  const groupStages    = stages.filter(s =>  G_ROUNDS.includes(s));
+  const knockoutStages = stages.filter(s => !G_ROUNDS.includes(s));
   const row = document.getElementById('stage-pills-row');
+
+  const stagePill = s => `<button class="pill pill-view ${stageFilter === s ? 'active' : ''}"
+    onclick="setStageFilter('${s.replace(/'/g,"&#39;")}', this)">${tStageShort(s)}</button>`;
+
   if (stages.length <= 1) { row.innerHTML = ''; }
   else {
-    row.innerHTML = ['all', ...stages].map(s => `
-      <button class="pill ${stageFilter === s ? 'active' : ''}"
-        onclick="setStageFilter('${s}', this)">
-        ${s === 'all' ? t('all_stages') : tStage(s)}
-      </button>`).join('');
+    row.innerHTML =
+      `<span class="filter-label">Etapa</span>` +
+      `<button class="pill pill-view ${stageFilter === 'all' ? 'active' : ''}" onclick="setStageFilter('all',this)">Todas</button>` +
+      (groupStages.length    ? `<span class="filter-sep"></span>${groupStages.map(stagePill).join('')}`    : '') +
+      (knockoutStages.length ? `<span class="filter-sep"></span>${knockoutStages.map(stagePill).join('')}` : '');
   }
 
-  document.getElementById('view-toggle-row').innerHTML = `
-    <button class="pill ${viewMode === 'grouped'       ? 'active' : ''}" onclick="setViewMode('grouped',this)">${t('view_grouped')}</button>
-    <button class="pill ${viewMode === 'chronological' ? 'active' : ''}" onclick="setViewMode('chronological',this)">${t('view_chrono')}</button>
-    ${currentUser ? `<button class="pill ${showUnbettedOnly ? 'active' : ''}" onclick="toggleUnbettedFilter(this)">${t('no_bet_filter')}</button>` : ''}
-    <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="toggleAllGroups()">⊞</button>
-    ${currentUser ? `<button class="btn btn-ghost btn-sm" onclick="randomizeBets()">${t('randomize_btn')}</button>` : ''}
-    ${currentUser ? `<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="confirmClearBets()">${t('clear_bets_btn')}</button>` : ''}`;
+  document.getElementById('view-toggle-row').innerHTML =
+    `<span class="filter-label">Vista</span>` +
+    `<button class="pill pill-view ${viewMode === 'grouped'       ? 'active' : ''}" onclick="setViewMode('grouped',this)">${t('view_grouped')}</button>` +
+    `<button class="pill pill-view ${viewMode === 'chronological' ? 'active' : ''}" onclick="setViewMode('chronological',this)">${t('view_chrono')}</button>` +
+    (currentUser ? `<span class="filter-sep"></span><button class="pill ${showUnbettedOnly ? 'active' : ''}" onclick="toggleUnbettedFilter(this)">${t('no_bet_filter')}</button>` : '') +
+    `<button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="toggleAllGroups()">⊞</button>` +
+    (currentUser ? `<button class="btn btn-ghost btn-sm" onclick="randomizeBets()">${t('randomize_btn')}</button>` : '') +
+    (currentUser ? `<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="confirmClearBets()">${t('clear_bets_btn')}</button>` : '');
 }
 
 function setViewMode(mode, btn) {
   viewMode = mode;
   localStorage.setItem('bolao_viewmode', mode);
-  document.querySelectorAll('#view-toggle-row .pill').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#view-toggle-row .pill-view').forEach(p => p.classList.remove('active'));
   btn.classList.add('active');
   renderMatches();
 }
@@ -121,7 +129,7 @@ function syncStatusPills() {
 function setStageFilter(f, btn) {
   stageFilter = f;
   localStorage.setItem('bolao_stageFilter', f);
-  document.querySelectorAll('#stage-pills-row .pill').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#stage-pills-row .pill-view').forEach(p => p.classList.remove('active'));
   btn.classList.add('active');
   renderMatches();
 }

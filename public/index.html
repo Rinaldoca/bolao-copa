@@ -113,15 +113,18 @@
           <p id="matches-user-hint" class="pane-sub"></p>
         </div>
       </div>
-      <div class="filter-row">
-        <div class="filter-group" id="status-pills">
-          <button class="pill active" onclick="setStatusFilter('all',this)" data-i18n="filter_all">Todas</button>
-          <button class="pill" onclick="setStatusFilter('upcoming',this)" data-i18n="filter_open">Abertas</button>
-          <button class="pill" onclick="setStatusFilter('finished',this)" data-i18n="filter_finished">Encerradas</button>
+      <div class="match-filters">
+        <div class="filter-row">
+          <span class="filter-label">Status</span>
+          <div class="filter-group" id="status-pills">
+            <button class="pill active" onclick="setStatusFilter('all',this)" data-i18n="filter_all">Todas</button>
+            <button class="pill" onclick="setStatusFilter('upcoming',this)" data-i18n="filter_open">Abertas</button>
+            <button class="pill" onclick="setStatusFilter('finished',this)" data-i18n="filter_finished">Encerradas</button>
+          </div>
         </div>
+        <div class="filter-row" id="stage-pills-row"></div>
+        <div class="filter-row" id="view-toggle-row"></div>
       </div>
-      <div class="filter-row" id="stage-pills-row" style="margin-top:8px"></div>
-      <div class="filter-row" id="view-toggle-row" style="margin-top:8px"></div>
       <div id="next-bet-card"></div>
       <div id="matches-container"></div>
     </section>

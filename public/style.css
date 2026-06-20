@@ -293,6 +293,10 @@ main { max-width: 860px; margin: 0 auto; padding: 28px 20px 60px; }
 /* ─── Match cards ────────────────────────────────────────────────────────── */
 .filter-row   { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 4px; }
 .filter-group { display: flex; gap: 6px; flex-wrap: wrap; }
+.match-filters { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.match-filters .filter-row { margin-bottom: 0; }
+.filter-label { font-size: .68rem; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; min-width: 40px; }
+.filter-sep { width: 1px; background: var(--border2); align-self: stretch; margin: 0 3px; flex-shrink: 0; }
 
 /* ─── Collapsible group ──────────────────────────────────────────────────── */
 .match-group {
