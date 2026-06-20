@@ -25,6 +25,20 @@ const DEFAULTS = {
 
 let _data = null;
 
+const GROUP_ROUNDS = ['1ª Rodada', '2ª Rodada', '3ª Rodada'];
+function isGroupRound(s) { return GROUP_ROUNDS.includes(s) || s === 'Fase de Grupos'; }
+
+function assignGroupRounds(db) {
+  const byGroup = {};
+  db.matches.filter(m => isGroupRound(m.stage) && m.group_name).forEach(m => {
+    (byGroup[m.group_name] = byGroup[m.group_name] || []).push(m);
+  });
+  Object.values(byGroup).forEach(gms => {
+    gms.sort((a, b) => a.match_date.localeCompare(b.match_date));
+    gms.forEach((m, i) => { m.stage = GROUP_ROUNDS[Math.min(Math.floor(i / 2), 2)]; });
+  });
+}
+
 function load() {
   if (_data) return _data;
   try {
@@ -38,6 +52,11 @@ function load() {
     _data.settings.top_scorer          = _data.settings.top_scorer          ?? null;
     _data.settings.special_bets_open   = _data.settings.special_bets_open   ?? true;
     _data.settings.last_sync           = _data.settings.last_sync           ?? null;
+    // Migrate "Fase de Grupos" to per-round stages
+    if (_data.matches.some(m => m.stage === 'Fase de Grupos')) {
+      assignGroupRounds(_data);
+      persist();
+    }
   } catch {
     _data = JSON.parse(JSON.stringify(DEFAULTS));
     persist();
@@ -59,6 +78,16 @@ function createUser(name) {
   if (db.users.find(u => u.name.toLowerCase() === name.toLowerCase())) throw new Error('DUPLICATE');
   const user = { id: ++db._seq.users, name, created_at: new Date().toISOString() };
   db.users.push(user);
+  persist();
+  return user;
+}
+
+function renameUser(id, name) {
+  const db = load();
+  const user = db.users.find(u => u.id === id);
+  if (!user) return null;
+  if (db.users.find(u => u.id !== id && u.name.toLowerCase() === name.toLowerCase())) throw new Error('DUPLICATE');
+  user.name = name;
   persist();
   return user;
 }
@@ -95,9 +124,9 @@ function createMatch({ home_team, away_team, match_date, stage, group_name, venu
 
 function replaceGroupStage(newMatches) {
   const db = load();
-  const oldIds = new Set(db.matches.filter(m => m.stage === 'Fase de Grupos').map(m => m.id));
+  const oldIds = new Set(db.matches.filter(m => isGroupRound(m.stage)).map(m => m.id));
   const deletedBets = db.bets.filter(b => oldIds.has(b.match_id)).length;
-  db.matches = db.matches.filter(m => m.stage !== 'Fase de Grupos');
+  db.matches = db.matches.filter(m => !isGroupRound(m.stage));
   db.bets    = db.bets.filter(b => !oldIds.has(b.match_id));
   db.feed    = db.feed.filter(f => !oldIds.has(f.match_id));
   for (const m of newMatches) {
@@ -107,7 +136,7 @@ function replaceGroupStage(newMatches) {
       home_team:    m.home_team,
       away_team:    m.away_team,
       match_date:   m.match_date,
-      stage:        'Fase de Grupos',
+      stage:        '1ª Rodada',
       group_name:   m.group_name || null,
       venue:        m.venue || null,
       home_score:   null, away_score: null,
@@ -115,6 +144,7 @@ function replaceGroupStage(newMatches) {
       created_at:   new Date().toISOString(),
     });
   }
+  assignGroupRounds(db);
   persist();
   return deletedBets;
 }
@@ -369,7 +399,7 @@ function setTopScorer(name) {
 function buildGroupStandingsServer() {
   const db = load();
   const groups = {};
-  db.matches.filter(m => m.stage === 'Fase de Grupos').forEach(m => {
+  db.matches.filter(m => isGroupRound(m.stage)).forEach(m => {
     const g = m.group_name || '?';
     if (!groups[g]) groups[g] = {};
     [m.home_team, m.away_team].forEach(team => {
@@ -518,12 +548,12 @@ function seed() {
   groups.forEach((group, gi) => {
     const [t1, t2, t3, t4] = group.teams;
     const [v1, v2] = group.venues;
-    createMatch({ home_team: t1, away_team: t2, match_date: addDays('2026-06-11', gi,      16), stage: 'Fase de Grupos', group_name: group.name, venue: v1 });
-    createMatch({ home_team: t3, away_team: t4, match_date: addDays('2026-06-11', gi,      20), stage: 'Fase de Grupos', group_name: group.name, venue: v2 });
-    createMatch({ home_team: t1, away_team: t3, match_date: addDays('2026-06-11', 12 + gi, 16), stage: 'Fase de Grupos', group_name: group.name, venue: v2 });
-    createMatch({ home_team: t2, away_team: t4, match_date: addDays('2026-06-11', 12 + gi, 20), stage: 'Fase de Grupos', group_name: group.name, venue: v1 });
-    createMatch({ home_team: t1, away_team: t4, match_date: addDays('2026-06-11', 24 + gi, 18), stage: 'Fase de Grupos', group_name: group.name, venue: v1 });
-    createMatch({ home_team: t2, away_team: t3, match_date: addDays('2026-06-11', 24 + gi, 18), stage: 'Fase de Grupos', group_name: group.name, venue: v2 });
+    createMatch({ home_team: t1, away_team: t2, match_date: addDays('2026-06-11', gi,      16), stage: '1ª Rodada', group_name: group.name, venue: v1 });
+    createMatch({ home_team: t3, away_team: t4, match_date: addDays('2026-06-11', gi,      20), stage: '1ª Rodada', group_name: group.name, venue: v2 });
+    createMatch({ home_team: t1, away_team: t3, match_date: addDays('2026-06-11', 12 + gi, 16), stage: '2ª Rodada', group_name: group.name, venue: v2 });
+    createMatch({ home_team: t2, away_team: t4, match_date: addDays('2026-06-11', 12 + gi, 20), stage: '2ª Rodada', group_name: group.name, venue: v1 });
+    createMatch({ home_team: t1, away_team: t4, match_date: addDays('2026-06-11', 24 + gi, 18), stage: '3ª Rodada', group_name: group.name, venue: v1 });
+    createMatch({ home_team: t2, away_team: t3, match_date: addDays('2026-06-11', 24 + gi, 18), stage: '3ª Rodada', group_name: group.name, venue: v2 });
   });
 }
 
@@ -613,7 +643,7 @@ function getMatchStats() {
 }
 
 module.exports = {
-  getUsers, getUserById, createUser,
+  getUsers, getUserById, createUser, renameUser,
   getMatches, getMatchById, createMatch, editMatch, setMatchResult, clearMatchResult, reassignMatchId, deleteMatch, replaceGroupStage,
   getBets, upsertBet, clearUserBets, upsertKnockoutMatches,
   getSpecialBetsOpen, setSpecialBetsOpen,

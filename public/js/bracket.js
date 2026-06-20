@@ -22,7 +22,7 @@ function showBracketTab(tab, btn) {
 
 function buildGroupStandings() {
   const groups = {};
-  allMatches.filter(m => m.stage === 'Fase de Grupos').forEach(m => {
+  allMatches.filter(m => GROUP_ROUND_STAGES.includes(m.stage)).forEach(m => {
     const g = m.group_name || '?';
     if (!groups[g]) groups[g] = {};
     [m.home_team, m.away_team].forEach(team => {
@@ -141,8 +141,9 @@ function renderThirdsRanking() {
 }
 
 /* ─── Bracket ────────────────────────────────────────────────────────────── */
-const BRACKET_STAGES = ['32 avos de Final', 'Oitavas de Final', 'Quartas de Final', 'Semifinal', 'Final'];
-const STAGE_ORDER    = ['Fase de Grupos', '32 avos de Final', 'Oitavas de Final', 'Quartas de Final', 'Semifinal', 'Terceiro Lugar', 'Final'];
+const BRACKET_STAGES  = ['32 avos de Final', 'Oitavas de Final', 'Quartas de Final', 'Semifinal', 'Final'];
+const GROUP_ROUND_STAGES = ['1ª Rodada', '2ª Rodada', '3ª Rodada'];
+const STAGE_ORDER     = [...GROUP_ROUND_STAGES, '32 avos de Final', 'Oitavas de Final', 'Quartas de Final', 'Semifinal', 'Terceiro Lugar', 'Final'];
 function stageRank(key) { const s = key.split('|||')[0]; const i = STAGE_ORDER.indexOf(s); return i === -1 ? 99 : i; }
 const BRACKET_COUNTS = { '32 avos de Final': 16, 'Oitavas de Final': 8, 'Quartas de Final': 4, 'Semifinal': 2, 'Final': 1 };
 

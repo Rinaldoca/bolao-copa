@@ -63,7 +63,9 @@ const LANG_DATA = {
     bracket_bets_closed: '⏳ apostas encerradas',
 
     // Stage names (display)
-    stage_groups: 'Fase de Grupos',
+    stage_r1: '1ª Rodada',
+    stage_r2: '2ª Rodada',
+    stage_r3: '3ª Rodada',
     stage_32: '32 avos de Final',
     stage_16: 'Oitavas de Final',
     stage_qf: 'Quartas de Final',
@@ -72,7 +74,9 @@ const LANG_DATA = {
     stage_final: 'Final',
 
     // Stage short labels (for charts/bars)
-    stage_short_groups: 'Grupos',
+    stage_short_r1: 'Rod. 1',
+    stage_short_r2: 'Rod. 2',
+    stage_short_r3: 'Rod. 3',
     stage_short_32: '32 avos',
     stage_short_16: 'Oitavas',
     stage_short_qf: 'Quartas',
@@ -379,7 +383,9 @@ const LANG_DATA = {
     bracket_bets_closed: '⏳ bets closed',
 
     // Stage names (display)
-    stage_groups: 'Group Stage',
+    stage_r1: 'Matchday 1',
+    stage_r2: 'Matchday 2',
+    stage_r3: 'Matchday 3',
     stage_32: 'Round of 32',
     stage_16: 'Round of 16',
     stage_qf: 'Quarter-finals',
@@ -388,7 +394,9 @@ const LANG_DATA = {
     stage_final: 'Final',
 
     // Stage short labels
-    stage_short_groups: 'Groups',
+    stage_short_r1: 'MD1',
+    stage_short_r2: 'MD2',
+    stage_short_r3: 'MD3',
     stage_short_32: 'R32',
     stage_short_16: 'R16',
     stage_short_qf: 'QF',
@@ -668,7 +676,9 @@ function t(key, vars) {
 }
 
 const _STAGE_KEYS = {
-  'Fase de Grupos':    'stage_groups',
+  '1ª Rodada':         'stage_r1',
+  '2ª Rodada':         'stage_r2',
+  '3ª Rodada':         'stage_r3',
   '32 avos de Final':  'stage_32',
   'Oitavas de Final':  'stage_16',
   'Quartas de Final':  'stage_qf',
@@ -678,7 +688,9 @@ const _STAGE_KEYS = {
 };
 
 const _STAGE_SHORT_KEYS = {
-  'Fase de Grupos':    'stage_short_groups',
+  '1ª Rodada':         'stage_short_r1',
+  '2ª Rodada':         'stage_short_r2',
+  '3ª Rodada':         'stage_short_r3',
   '32 avos de Final':  'stage_short_32',
   'Oitavas de Final':  'stage_short_16',
   'Quartas de Final':  'stage_short_qf',

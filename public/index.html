@@ -248,7 +248,9 @@
             <input type="datetime-local" id="f-date"  class="input">
             <input type="text"           id="f-group" class="input" placeholder="Grupo (ex: A)">
             <select                      id="f-stage" class="input">
-              <option value="Fase de Grupos">Fase de Grupos</option>
+              <option value="1ª Rodada">1ª Rodada (Grupos)</option>
+              <option value="2ª Rodada">2ª Rodada (Grupos)</option>
+              <option value="3ª Rodada">3ª Rodada (Grupos)</option>
               <option value="32 avos de Final">32 avos de Final</option>
               <option value="Oitavas de Final">Oitavas de Final</option>
               <option value="Quartas de Final">Quartas de Final</option>
@@ -272,6 +274,17 @@
             <input type="number" id="ab-away" class="input" placeholder="Gols visitante" min="0" max="20">
           </div>
           <button class="btn btn-primary" onclick="adminSetBet()">Salvar palpite</button>
+        </div>
+
+        <!-- Rename user -->
+        <div class="card">
+          <h3>🏷️ Renomear Usuário</h3>
+          <p class="card-sub">Selecione o usuário e digite o novo nome (útil para corrigir nomes inadequados).</p>
+          <div class="field-row">
+            <select id="ru-user" class="input"><option value="">Selecione o usuário...</option></select>
+            <input type="text" id="ru-name" class="input" placeholder="Novo nome" maxlength="30">
+            <button class="btn btn-secondary" onclick="adminRenameUser()">Salvar</button>
+          </div>
         </div>
 
         <!-- Change password -->
@@ -327,7 +340,10 @@
       <input type="datetime-local" id="em-date"  class="input">
       <input type="text"           id="em-group" class="input" placeholder="Grupo">
       <select                      id="em-stage" class="input">
-        <option value="Fase de Grupos">Fase de Grupos</option>
+        <option value="1ª Rodada">1ª Rodada (Grupos)</option>
+        <option value="2ª Rodada">2ª Rodada (Grupos)</option>
+        <option value="3ª Rodada">3ª Rodada (Grupos)</option>
+        <option value="32 avos de Final">32 avos de Final</option>
         <option value="Oitavas de Final">Oitavas de Final</option>
         <option value="Quartas de Final">Quartas de Final</option>
         <option value="Semifinal">Semifinal</option>

@@ -223,7 +223,6 @@ async function importGroupStage() {
     home_team:    toPortuguese(m.homeTeam?.name || m.homeTeam?.shortName || ''),
     away_team:    toPortuguese(m.awayTeam?.name || m.awayTeam?.shortName || ''),
     match_date:   m.utcDate,
-    stage:        'Fase de Grupos',
     group_name:   m.group?.replace('GROUP_', '') || null,
     venue:        m.venue || null,
   })).filter(m => m.home_team && m.away_team);

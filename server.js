@@ -40,6 +40,21 @@ app.post('/api/users', (req, res) => {
   }
 });
 
+app.put('/api/admin/users/:id', (req, res) => {
+  const { password } = req.body;
+  if (!auth(password)) return res.status(403).json({ error: 'Senha incorreta' });
+  const name = (req.body.name || '').trim();
+  if (name.length < 2)  return res.status(400).json({ error: 'Nome muito curto (mínimo 2 caracteres)' });
+  if (name.length > 30) return res.status(400).json({ error: 'Nome muito longo (máximo 30 caracteres)' });
+  try {
+    const user = db.renameUser(Number(req.params.id), name);
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+    res.json({ id: user.id, name: user.name });
+  } catch {
+    res.status(400).json({ error: 'Este nome já está em uso' });
+  }
+});
+
 // ── Matches ───────────────────────────────────────────────────────────────────
 
 app.get('/api/matches', (req, res) => res.json(db.getMatches()));

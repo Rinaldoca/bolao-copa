@@ -18,8 +18,11 @@ async function loadAdminBetSelects() {
   const [users, matches] = await Promise.all([api('/api/users'), api('/api/matches')]);
   const uSel = document.getElementById('ab-user');
   const mSel = document.getElementById('ab-match');
-  uSel.innerHTML = '<option value="">Selecione o usuário...</option>' +
+  const userOpts = '<option value="">Selecione o usuário...</option>' +
     (users||[]).map(u => `<option value="${u.id}">${u.name}</option>`).join('');
+  uSel.innerHTML = userOpts;
+  const ruSel = document.getElementById('ru-user');
+  if (ruSel) ruSel.innerHTML = userOpts;
   mSel.innerHTML = '<option value="">Selecione a partida...</option>' +
     (matches||[]).map(m => {
       const d = new Date(m.match_date).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Berlin'});
@@ -270,6 +273,20 @@ async function adminBackup() {
 
 function adminDownload() {
   window.location.href = `/api/admin/download?password=${encodeURIComponent(adminPwd)}`;
+}
+
+async function adminRenameUser() {
+  const userId = Number(document.getElementById('ru-user').value);
+  const name   = document.getElementById('ru-name').value.trim();
+  if (!userId) { toast('Selecione o usuário', 'error'); return; }
+  if (name.length < 2) { toast('Nome muito curto (mín. 2 caracteres)', 'error'); return; }
+  const res = await api(`/api/admin/users/${userId}`, 'PUT', { password: adminPwd, name });
+  if (res.error) { toast(res.error, 'error'); return; }
+  document.getElementById('ru-name').value = '';
+  toast(`Usuário renomeado para ${res.name} ✓`, 'success');
+  matchBetsCache = {}; expandedBets.clear();
+  loadAdminBetSelects();
+  loadLeaderboard(); loadSpecialAndFeed();
 }
 
 async function adminChangePwd() {
