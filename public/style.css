@@ -150,13 +150,13 @@ main { max-width: 860px; margin: 0 auto; padding: 28px 20px 60px; }
 .lb-table { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
 
 .lb-header {
-  display: grid; grid-template-columns: 44px 1fr 72px 60px 60px;
+  display: grid; grid-template-columns: 44px 1fr 72px 48px 48px 48px;
   padding: 10px 20px; background: var(--surface2);
   font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3);
   border-bottom: 1px solid var(--border);
 }
 .lb-row {
-  display: grid; grid-template-columns: 44px 1fr 72px 60px 60px;
+  display: grid; grid-template-columns: 44px 1fr 72px 48px 48px 48px;
   border-left: 3px solid transparent;
   align-items: center; padding: 13px 20px;
   border-bottom: 1px solid var(--border); transition: background .15s;

@@ -47,7 +47,7 @@ async function loadLeaderboard() {
     <div class="lb-table">
       <div class="lb-header">
         <div>#</div><div>${t('lb_col_player')}</div><div style="text-align:right">${t('lb_col_pts')}</div>
-        <div style="text-align:center">🎯</div><div style="text-align:center">✅</div>
+        <div style="text-align:center">🎯</div><div style="text-align:center">⚖️</div><div style="text-align:center">✅</div>
       </div>
       ${data.map((p, i) => {
         const prev = prevRanks[p.id];
@@ -67,6 +67,7 @@ async function loadLeaderboard() {
           </div>
           <div class="lb-pts">${p.total_points}</div>
           <div class="lb-stat">${p.exact_scores}</div>
+          <div class="lb-stat">${p.diff_scores}</div>
           <div class="lb-stat">${p.correct_results}</div>
         </div>`;
       }).join('')}
@@ -98,7 +99,7 @@ async function shareLeaderboard() {
     : `🏆 Bolão - Classificação${stageLabel}\n`;
   const rows = data.map((p, i) => {
     const rank = ['🥇','🥈','🥉'][i] || `${i+1}º`;
-    return `${rank} ${p.name} — ${p.total_points}pts (🎯${p.exact_scores} ✅${p.correct_results})`;
+    return `${rank} ${p.name} — ${p.total_points}pts (🎯${p.exact_scores} ⚖️${p.diff_scores} ✅${p.correct_results})`;
   }).join('\n');
   try {
     await navigator.clipboard.writeText(header + rows);

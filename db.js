@@ -537,7 +537,8 @@ function getLeaderboard(stage) {
       scorer_points:   scorerPts,
       total_bets:      myBets.length,
       exact_scores:    myBets.filter(b => b.points === 4).length,
-      correct_results: myBets.filter(b => b.points === 2 || b.points === 3).length,
+      diff_scores:     myBets.filter(b => b.points === 3).length,
+      correct_results: myBets.filter(b => b.points === 2).length,
       wrong_bets:      finished.filter(b => b.points === 0).length,
     };
   }).sort((a, b) => b.total_points - a.total_points || b.exact_scores - a.exact_scores || a.name.localeCompare(b.name));
