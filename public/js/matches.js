@@ -316,8 +316,7 @@ function renderMatchCard(m) {
     betBar = `<div class="bet-bar"><span class="no-bet-msg">${t('tbd_bet_msg')}</span></div>`;
   } else if (finished) {
     const pts = bet?.points ?? null;
-    const chipClass = pts === 3 ? 'pts-3' : pts === 1 ? 'pts-1' : pts === 0 ? 'pts-0' : 'pts-none';
-    const emoji     = pts === 3 ? '🎯' : pts === 1 ? '✅' : pts === 0 ? '❌' : '';
+    const { cls: chipClass, emoji } = pts == null ? { cls: 'pts-none', emoji: '' } : ptsMeta(pts);
     betBar = `<div class="bet-bar">
       ${bet
         ? `<div class="bet-result-row">
@@ -435,7 +434,7 @@ function renderAllBets(matchId, hideScores) {
     return `<div class="all-bets-list">${names}</div>`;
   }
   const chips = bets.map(b => {
-    const cls = b.points === 3 ? 'pts-3' : b.points === 1 ? 'pts-1' : b.points === 0 && b.status === 'finished' ? 'pts-0' : '';
+    const cls = b.status === 'finished' ? ptsMeta(b.points).cls : '';
     return `<div class="feed-chip ${cls}">
       <span class="fc-name">${b.user_name}</span>
       <span class="fc-score">${b.home_score}×${b.away_score}</span>

@@ -22,7 +22,7 @@ function computeDetailedStats(bets, matchMap) {
     byStage[m.stage].pts += b.points;
     byStage[m.stage].count++;
     if (b.points >= 1) byStage[m.stage].correct++;
-    if (b.points === 3) byStage[m.stage].exact++;
+    if (b.points === 4) byStage[m.stage].exact++;
   });
 
   let homeWins = 0, draws = 0, awayWins = 0;
@@ -340,7 +340,7 @@ async function loadMyPage() {
   document.getElementById('me-bets').innerHTML = sorted.length ? sorted.map(b => {
     const match = allMatches.find(m => m.id === b.match_id);
     const finished = b.status === 'finished';
-    const chipClass = b.points === 3 ? 'pts-3' : b.points === 1 ? 'pts-1' : finished ? 'pts-0' : 'pts-none';
+    const chipClass = ptsMeta(b.points, finished).cls;
     const chipLabel = finished ? `${b.points} pt${b.points!==1?'s':''}` : '—';
     return `<div class="me-bet-item">
       <div style="flex:1;min-width:140px">

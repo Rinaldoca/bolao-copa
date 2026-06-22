@@ -203,8 +203,7 @@ function renderBracketCard(m) {
   if (tbd) {
     betLine = `<div class="bracket-bet" style="color:var(--text-3);font-size:.72rem">${t('tbd_bet_msg')}</div>`;
   } else if (finished && myBet) {
-    const cls   = myBet.points===3 ? 'pts-3' : myBet.points===1 ? 'pts-1' : 'pts-0';
-    const emoji = myBet.points===3 ? '🎯' : myBet.points===1 ? '✅' : '❌';
+    const { cls, emoji } = ptsMeta(myBet.points);
     betLine = `<div class="bracket-bet"><span class="pts-chip ${cls}" style="font-size:.7rem;padding:2px 7px">${myBet.home_score}-${myBet.away_score} · ${myBet.points}pt ${emoji}</span></div>`;
   } else if (finished && !myBet) {
     betLine = '';

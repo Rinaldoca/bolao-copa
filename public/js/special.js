@@ -259,13 +259,13 @@ function renderFeed(feed) {
       const match   = matchLookup[entry.match_id];
       const hFlag   = _flagMap[entry.home_team] || '';
       const aFlag   = _flagMap[entry.away_team] || '';
-      const exact   = entry.results.filter(r => r.points === 3).length;
-      const correct = entry.results.filter(r => r.points === 1).length;
+      const exact   = entry.results.filter(r => r.points === 4).length;
+      const diff    = entry.results.filter(r => r.points === 3).length;
+      const correct = entry.results.filter(r => r.points === 2).length;
       const missed  = entry.results.filter(r => r.points === 0).length;
-      const summary = [exact?`🎯 ${exact}`:'', correct?`✅ ${correct}`:'', missed?`❌ ${missed}`:''].filter(Boolean).join(' · ');
+      const summary = [exact?`🎯 ${exact}`:'', diff?`⚖️ ${diff}`:'', correct?`✅ ${correct}`:'', missed?`❌ ${missed}`:''].filter(Boolean).join(' · ');
       const chips = entry.results.map(r => {
-        const cls   = r.points === 3 ? 'pts-3' : r.points === 1 ? 'pts-1' : 'pts-0';
-        const emoji = r.points === 3 ? '🎯'     : r.points === 1 ? '✅'    : '❌';
+        const { cls, emoji } = ptsMeta(r.points);
         return `<div class="feed-chip ${cls}">
           <span class="fc-name">${r.user_name}</span>
           <span class="fc-score">${r.home_score}×${r.away_score}</span>

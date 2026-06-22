@@ -184,7 +184,7 @@ async function renderComparison(idA, idB) {
     const ba = mapA[id], bb = mapB[id];
     const pa = ba.points || 0, pb = bb.points || 0;
     const winner = pa > pb ? 'a' : pb > pa ? 'b' : 'tie';
-    const chip = (p) => `<span class="pts-chip ${p===3?'pts-3':p===1?'pts-1':'pts-0'}">${p}pt</span>`;
+    const chip = (p) => `<span class="pts-chip ${ptsMeta(p).cls}">${p}pt</span>`;
     return `<div class="cmp-match-row ${winner === 'a' ? 'cmp-win-a' : winner === 'b' ? 'cmp-win-b' : ''}">
       <div class="cmp-match-bet cmp-bet-a">
         <span class="cmp-score">${ba.home_score}×${ba.away_score}</span>${chip(pa)}

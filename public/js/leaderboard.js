@@ -121,7 +121,7 @@ function renderTeamStats(bets, matchMap, el) {
       if (!teamMap[team]) teamMap[team] = { team, games: 0, correct: 0, exact: 0 };
       teamMap[team].games++;
       if (b.points > 0) teamMap[team].correct++;
-      if (b.points === 3) teamMap[team].exact++;
+      if (b.points === 4) teamMap[team].exact++;
     });
   });
 

@@ -10,6 +10,16 @@ function avatarHtml(name, id, size = 32) {
   return `<div class="avatar" style="background:${_avatarColor(id)};width:${size}px;height:${size}px;line-height:${size}px;font-size:${Math.round(size*.38)}px">${_initials(name)}</div>`;
 }
 
+/* ─── Scoring tiers ──────────────────────────────────────────────────────── */
+// 4 = exact score · 3 = right goal difference · 2 = right winner · 0 = miss
+function ptsMeta(points, finished = true) {
+  if (points === 4) return { cls: 'pts-4', emoji: '🎯' };
+  if (points === 3) return { cls: 'pts-3', emoji: '⚖️' };
+  if (points === 2) return { cls: 'pts-2', emoji: '✅' };
+  if (finished)     return { cls: 'pts-0', emoji: '❌' };
+  return { cls: 'pts-none', emoji: '' };
+}
+
 let currentUser    = null;
 let allMatches     = [];
 let userBets       = {};
@@ -192,7 +202,7 @@ async function openPlayerModal(userId, name) {
     const m = matchMap[b.match_id];
     if (!m) return '';
     const finished = m.status === 'finished';
-    const chipClass = b.points === 3 ? 'pts-3' : b.points === 1 ? 'pts-1' : finished ? 'pts-0' : 'pts-none';
+    const chipClass = ptsMeta(b.points, finished).cls;
     const chipLabel = finished ? `${b.points}pt` : '—';
     const score = finished ? `<span style="color:var(--text-3);font-size:.78rem">${m.home_score}×${m.away_score}</span>` : '';
     return `<div class="player-bet-row">
@@ -229,7 +239,7 @@ async function openPlayerModal(userId, name) {
         const myPtsR  = myB.points  || 0;
         const thPtsR  = b.points    || 0;
         const outcome = myPtsR > thPtsR ? 'win' : myPtsR < thPtsR ? 'loss' : 'draw';
-        const chip = p => `<span class="pts-chip ${p===3?'pts-3':p===1?'pts-1':'pts-0'}">${p}pt</span>`;
+        const chip = p => `<span class="pts-chip ${ptsMeta(p).cls}">${p}pt</span>`;
         return `<div class="h2h-row">
           <div class="h2h-match">${_flagMap[m.home_team]||''} ${tTeam(m.home_team)} ${m.home_score}×${m.away_score} ${tTeam(m.away_team)} ${_flagMap[m.away_team]||''}</div>
           <div class="h2h-bets">

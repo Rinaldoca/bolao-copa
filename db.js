@@ -163,6 +163,14 @@ function editMatch(id, { home_team, away_team, match_date, stage, group_name, ve
   return match;
 }
 
+// Scoring: 4 = exact score · 3 = right goal difference · 2 = right winner · 0 = miss
+function scoreBet(bet, home_score, away_score) {
+  if (bet.home_score === home_score && bet.away_score === away_score) return 4;
+  if (bet.home_score - bet.away_score === home_score - away_score)     return 3;
+  if (Math.sign(bet.home_score - bet.away_score) === Math.sign(home_score - away_score)) return 2;
+  return 0;
+}
+
 function setMatchResult(id, home_score, away_score) {
   const db = load();
   const match = db.matches.find(m => m.id === id);
@@ -171,16 +179,9 @@ function setMatchResult(id, home_score, away_score) {
   match.away_score = away_score;
   match.status = 'finished';
 
-  const matchResult = Math.sign(home_score - away_score);
   const betResults = [];
   db.bets.filter(b => b.match_id === id).forEach(bet => {
-    if (bet.home_score === home_score && bet.away_score === away_score) {
-      bet.points = 3;
-    } else if (Math.sign(bet.home_score - bet.away_score) === matchResult) {
-      bet.points = 1;
-    } else {
-      bet.points = 0;
-    }
+    bet.points = scoreBet(bet, home_score, away_score);
     betResults.push({ ...bet, user_name: db.users.find(u => u.id === bet.user_id)?.name });
   });
 
@@ -201,6 +202,38 @@ function setMatchResult(id, home_score, away_score) {
 
   persist();
   return match;
+}
+
+// Re-score every finished match's bets (and feed snapshots) with the current
+// scoring formula. Idempotent — safe to run on boot after a formula change.
+function recomputeAllPoints() {
+  const db = load();
+  const scoreOf = {};
+  db.matches.forEach(m => {
+    if (m.status === 'finished' && m.home_score != null && m.away_score != null) {
+      scoreOf[m.id] = [m.home_score, m.away_score];
+    }
+  });
+  db.bets.forEach(b => {
+    const r = scoreOf[b.match_id];
+    if (r) b.points = scoreBet(b, r[0], r[1]);
+  });
+  db.feed.forEach(entry => {
+    if (entry.type === 'match_result' && Array.isArray(entry.results)) {
+      entry.results.forEach(r => { r.points = scoreBet(r, entry.home_score, entry.away_score); });
+      entry.results.sort((a, b) => b.points - a.points);
+    }
+  });
+  persist();
+}
+
+const SCORING_VERSION = 2;
+function applyScoringMigration() {
+  const db = load();
+  if (db.settings.scoring_version === SCORING_VERSION) return;
+  recomputeAllPoints();
+  db.settings.scoring_version = SCORING_VERSION;
+  persist();
 }
 
 function upsertKnockoutMatches(matches) {
@@ -503,8 +536,8 @@ function getLeaderboard(stage) {
       champion_points: champPts,
       scorer_points:   scorerPts,
       total_bets:      myBets.length,
-      exact_scores:    myBets.filter(b => b.points === 3).length,
-      correct_results: myBets.filter(b => b.points === 1).length,
+      exact_scores:    myBets.filter(b => b.points === 4).length,
+      correct_results: myBets.filter(b => b.points === 2 || b.points === 3).length,
       wrong_bets:      finished.filter(b => b.points === 0).length,
     };
   }).sort((a, b) => b.total_points - a.total_points || b.exact_scores - a.exact_scores || a.name.localeCompare(b.name));
@@ -582,7 +615,7 @@ function getGroupAwards() {
       else temp = 0;
     }
 
-    const exactScores = finished.filter(b => b.points === 3).length;
+    const exactScores = finished.filter(b => b.points === 4).length;
     const correct     = finished.filter(b => b.points > 0).length;
     const accuracy    = finished.length >= 3 ? correct / finished.length : -1;
 
@@ -628,7 +661,7 @@ function getMatchStats() {
     const bets = db.bets.filter(b => b.match_id === m.id);
     const total = bets.length;
     if (total === 0) return null;
-    const exact   = bets.filter(b => b.points === 3).length;
+    const exact   = bets.filter(b => b.points === 4).length;
     const correct = bets.filter(b => b.points > 0).length;
     return {
       id: m.id,
@@ -654,4 +687,5 @@ module.exports = {
   getSettings, getAdminPassword, setAdminPassword,
   getLastSync, setLastSync,
   needsSeed, seed,
+  recomputeAllPoints, applyScoringMigration,
 };

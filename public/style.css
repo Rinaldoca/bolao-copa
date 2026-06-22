@@ -283,8 +283,9 @@ main { max-width: 860px; margin: 0 auto; padding: 28px 20px 60px; }
 .feed-chip .fc-name  { font-weight: 700; }
 .feed-chip .fc-score { color: var(--text-3); }
 .feed-chip .fc-pts   { font-weight: 800; }
-.feed-chip.pts-3 { border-color: var(--green);  background: var(--green-dim); }
-.feed-chip.pts-1 { border-color: var(--blue);   background: var(--blue-dim); }
+.feed-chip.pts-4 { border-color: var(--green);  background: var(--green-dim); }
+.feed-chip.pts-3 { border-color: var(--purple); background: var(--purple-dim); }
+.feed-chip.pts-2 { border-color: var(--blue);   background: var(--blue-dim); }
 .feed-chip.pts-0 { border-color: var(--border2); }
 .feed-chip.pts-s { border-color: var(--gold);   background: var(--gold-glow); }
 
@@ -441,10 +442,11 @@ main { max-width: 860px; margin: 0 auto; padding: 28px 20px 60px; }
 .bet-prediction { font-weight: 700; }
 
 .pts-chip { padding: 4px 11px; border-radius: 999px; font-weight: 800; font-size: .78rem; }
-.pts-3    { background: var(--green-dim); color: var(--green); }
-.pts-1    { background: var(--blue-dim);  color: var(--blue); }
-.pts-0    { background: var(--red-dim);   color: var(--red); }
-.pts-none { background: var(--surface3);  color: var(--text-3); }
+.pts-4    { background: var(--green-dim);  color: var(--green); }
+.pts-3    { background: var(--purple-dim); color: var(--purple); }
+.pts-2    { background: var(--blue-dim);   color: var(--blue); }
+.pts-0    { background: var(--red-dim);    color: var(--red); }
+.pts-none { background: var(--surface3);   color: var(--text-3); }
 
 .no-bet-msg   { font-size: .8rem; color: var(--text-3); width: 100%; text-align: center; padding: 2px 0; }
 .no-bet-msg a { color: var(--gold); text-decoration: none; }
