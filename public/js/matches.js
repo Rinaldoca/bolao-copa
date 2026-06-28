@@ -147,7 +147,8 @@ function renderNextBetCard() {
   const now = Date.now();
   const candidates = allMatches
     .filter(m => m.status === 'upcoming' && !userBets[m.id] && new Date(m.match_date).getTime() - now > LOCK_MS &&
-      m.home_team !== 'A definir' && m.away_team !== 'A definir')
+      m.home_team !== 'A definir' && m.away_team !== 'A definir' &&
+      !/Loser|Winner/.test(m.home_team) && !/Loser|Winner/.test(m.away_team))
     .sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
   if (!candidates.length) { el.innerHTML = ''; return; }
   const next = candidates[0];
