@@ -326,6 +326,11 @@ function openEditModal(matchId) {
   document.getElementById('em-group').value = match.group_name || '';
   document.getElementById('em-stage').value = match.stage;
   document.getElementById('em-venue').value = match.venue || '';
+  // Populate datalist with all unique team names from current matches
+  const teams = [...new Set(
+    allMatches.flatMap(m => [m.home_team, m.away_team]).filter(t => t && t !== 'A definir')
+  )].sort();
+  document.getElementById('team-datalist').innerHTML = teams.map(t => `<option value="${t}">`).join('');
   document.getElementById('edit-modal').classList.remove('hidden');
   document.getElementById('edit-modal-overlay').classList.remove('hidden');
 }

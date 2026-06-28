@@ -347,8 +347,9 @@
       <button class="close-btn" onclick="closeEditModal()">✕</button>
     </div>
     <div class="form-grid">
-      <input type="text"           id="em-home"  class="input" placeholder="Time da casa">
-      <input type="text"           id="em-away"  class="input" placeholder="Time visitante">
+      <input type="text" id="em-home" class="input" placeholder="Time da casa"    list="team-datalist" autocomplete="off">
+      <input type="text" id="em-away" class="input" placeholder="Time visitante" list="team-datalist" autocomplete="off">
+      <datalist id="team-datalist"></datalist>
       <input type="datetime-local" id="em-date"  class="input">
       <input type="text"           id="em-group" class="input" placeholder="Grupo">
       <select                      id="em-stage" class="input">
