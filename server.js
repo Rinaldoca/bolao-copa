@@ -327,6 +327,18 @@ app.get('/api/admin/download', (req, res) => {
   res.sendFile(file);
 });
 
+app.post('/api/admin/upload-db', (req, res) => {
+  if (!auth(req.body.password)) return res.status(403).json({ error: 'Senha incorreta' });
+  try {
+    const content = JSON.stringify(req.body.db);
+    fs.writeFileSync(path.join(DATA_DIR, 'bolao.json'), content);
+    db.reload();
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // ── Helper ────────────────────────────────────────────────────────────────────
 
 function auth(password) { return password === db.getAdminPassword(); }

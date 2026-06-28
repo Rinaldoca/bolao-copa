@@ -68,6 +68,8 @@ function persist() {
   fs.writeFileSync(FILE, JSON.stringify(_data, null, 2));
 }
 
+function reload() { _data = null; }
+
 // ── Users ─────────────────────────────────────────────────────────────────────
 
 function getUsers()       { return load().users.slice().sort((a, b) => a.name.localeCompare(b.name)); }
@@ -836,4 +838,5 @@ module.exports = {
   getLastSync, setLastSync,
   needsSeed, seed,
   recomputeAllPoints, applyScoringMigration,
+  reload,
 };
