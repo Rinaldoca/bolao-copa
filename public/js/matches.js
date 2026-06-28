@@ -29,7 +29,8 @@ function updatePendingBadge() {
   const LOCK_MS = 5 * 60 * 1000;
   const open = allMatches.filter(m =>
     m.status === 'upcoming' && new Date(m.match_date) - now > LOCK_MS &&
-    m.home_team !== 'A definir' && m.away_team !== 'A definir'
+    m.home_team !== 'A definir' && m.away_team !== 'A definir' &&
+    !(m.bet_opens_at && now < new Date(m.bet_opens_at))
   );
   const unbetted = open.filter(m => !userBets[m.id]).length;
   if (unbetted > 0) {
@@ -148,7 +149,8 @@ function renderNextBetCard() {
   const candidates = allMatches
     .filter(m => m.status === 'upcoming' && !userBets[m.id] && new Date(m.match_date).getTime() - now > LOCK_MS &&
       m.home_team !== 'A definir' && m.away_team !== 'A definir' &&
-      !/Loser|Winner/.test(m.home_team) && !/Loser|Winner/.test(m.away_team))
+      !/Loser|Winner/.test(m.home_team) && !/Loser|Winner/.test(m.away_team) &&
+      !(m.bet_opens_at && now < new Date(m.bet_opens_at)))
     .sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
   if (!candidates.length) { el.innerHTML = ''; return; }
   const next = candidates[0];
@@ -187,7 +189,8 @@ function renderMatches() {
   if (stageFilter  !== 'all')      list = list.filter(m => m.stage === stageFilter);
   if (showUnbettedOnly && currentUser) {
     const LOCK_MS = 5 * 60 * 1000;
-    list = list.filter(m => m.status === 'upcoming' && !userBets[m.id] && Date.now() < new Date(m.match_date).getTime() - LOCK_MS);
+    list = list.filter(m => m.status === 'upcoming' && !userBets[m.id] && Date.now() < new Date(m.match_date).getTime() - LOCK_MS &&
+      !(m.bet_opens_at && Date.now() < new Date(m.bet_opens_at)));
   }
 
   if (!list.length) {
@@ -296,7 +299,8 @@ function renderMatchCard(m) {
   const finished = m.status === 'finished';
   const tbd      = !finished && (m.home_team === 'A definir' || m.away_team === 'A definir');
   const matchDate = new Date(m.match_date);
-  const isPast   = Date.now() > matchDate.getTime() - 5 * 60 * 1000;
+  const isPast   = Date.now() > matchDate.getTime() - 5 * 60 * 1000 ||
+                   (m.bet_opens_at && Date.now() < new Date(m.bet_opens_at));
   const msLeft   = matchDate.getTime() - Date.now();
   const showCountdown = !finished && !tbd && msLeft > 0 && msLeft < 48 * 60 * 60 * 1000;
 

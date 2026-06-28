@@ -437,7 +437,7 @@ function editKnockoutMatch(id, fields) {
   const db = load();
   const match = db.matches.find(m => m.id === id);
   if (!match) return;
-  const allowed = ['api_match_id','home_team','away_team','match_date','venue','status','home_score','away_score'];
+  const allowed = ['api_match_id','home_team','away_team','match_date','venue','status','home_score','away_score','bet_opens_at'];
   for (const key of allowed) {
     if (key in fields) match[key] = fields[key];
   }
