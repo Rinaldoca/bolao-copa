@@ -240,10 +240,22 @@ function upsertKnockoutMatches(matches) {
   const db = load();
   let added = 0, updated = 0;
   for (const m of matches) {
-    const existing = m.api_match_id
+    let existing = m.api_match_id
       ? db.matches.find(x => x.api_match_id === m.api_match_id)
       : null;
+    // Fallback: match by stage + same calendar day for locally-generated matches
+    // (api_match_id null). Use day-only comparison because API times may differ
+    // from hardcoded dates by up to an hour. Only accept when exactly 1 candidate
+    // exists for that stage/day so we never misassign.
+    if (!existing && m.api_match_id && m.stage && m.match_date) {
+      const day = m.match_date.slice(0, 10);
+      const candidates = db.matches.filter(
+        x => x.stage === m.stage && x.match_date?.slice(0, 10) === day && !x.api_match_id
+      );
+      if (candidates.length === 1) existing = candidates[0];
+    }
     if (existing) {
+      if (m.api_match_id && !existing.api_match_id) existing.api_match_id = m.api_match_id;
       if (m.home_team && m.home_team !== 'A definir') existing.home_team = m.home_team;
       if (m.away_team && m.away_team !== 'A definir') existing.away_team = m.away_team;
       existing.match_date = m.match_date;
@@ -253,7 +265,9 @@ function upsertKnockoutMatches(matches) {
         setMatchResult(existing.id, m.home_score, m.away_score);
       }
       updated++;
-    } else {
+    } else if (m.home_team && m.home_team !== 'A definir' && m.away_team && m.away_team !== 'A definir') {
+      // Only create a new match when the API actually knows who's playing.
+      // Skip "A definir" entries — placeholder matches already exist from generateKnockout.
       db.matches.push({
         id: ++db._seq.matches,
         api_match_id: m.api_match_id || null,
@@ -298,6 +312,17 @@ function reassignMatchId(fromId, toId) {
   db.feed.filter(f => f.match_id === fromId).forEach(f => { f.match_id = toId; });
   persist();
   return { ok: true, match };
+}
+
+function editKnockoutMatch(id, fields) {
+  const db = load();
+  const match = db.matches.find(m => m.id === id);
+  if (!match) return;
+  const allowed = ['api_match_id','home_team','away_team','match_date','venue','status','home_score','away_score'];
+  for (const key of allowed) {
+    if (key in fields) match[key] = fields[key];
+  }
+  persist();
 }
 
 function deleteMatch(id) {
@@ -679,7 +704,7 @@ function getMatchStats() {
 module.exports = {
   getUsers, getUserById, createUser, renameUser,
   getMatches, getMatchById, createMatch, editMatch, setMatchResult, clearMatchResult, reassignMatchId, deleteMatch, replaceGroupStage,
-  getBets, upsertBet, clearUserBets, upsertKnockoutMatches,
+  getBets, upsertBet, clearUserBets, upsertKnockoutMatches, editKnockoutMatch,
   getSpecialBetsOpen, setSpecialBetsOpen,
   getChampionBets, upsertChampionBet, setChampion,
   getScorerBets, upsertScorerBet, setTopScorer,

@@ -717,6 +717,7 @@ tr.eliminated td:first-child { border-left: 3px solid var(--red); }
 .btn-primary:hover   { background: var(--gold-d); }
 .btn-secondary { background: var(--surface2); border: 1px solid var(--border2); color: var(--text-2); }
 .btn-secondary:hover { border-color: var(--text-2); color: var(--text); }
+.btn-secondary.active { background: var(--gold); border-color: var(--gold); color: #000; }
 .btn-danger    { background: var(--red-dim);  border: 1px solid var(--red);    color: var(--red); }
 .btn-danger:hover    { background: var(--red); color: #fff; }
 .btn-ghost     { background: none;            border: 1px solid var(--border2); color: var(--text-3); }

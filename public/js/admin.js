@@ -84,9 +84,25 @@ async function adminSetScorer() {
   loadLeaderboard(); loadSpecialAndFeed();
 }
 
+let adminStageFilter = '';
+function setAdminStageFilter(stage) {
+  adminStageFilter = stage;
+  document.querySelectorAll('.stage-filter-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.trim() === (stage || 'Todas'));
+  });
+  renderAdminMatchList();
+}
+
 async function loadAdminMatches() {
   const matches = await api('/api/matches') || [];
   allMatches = matches; // keep global in sync so openEditModal finds new matches
+  renderAdminMatchList();
+}
+
+function renderAdminMatchList() {
+  const matches = adminStageFilter
+    ? allMatches.filter(m => m.stage === adminStageFilter)
+    : allMatches;
   const wrap = document.getElementById('admin-match-list');
   if (!matches.length) {
     wrap.innerHTML = '<div class="empty" style="padding:16px 0">Nenhuma partida.</div>'; return;
@@ -241,7 +257,7 @@ async function adminImportKnockout() {
   const res = await api('/api/admin/import-knockout', 'POST', { password: adminPwd });
   btn.disabled = false; btn.textContent = '🏆 Importar Fase Eliminatória (API)';
   if (res.error || !res.ok) { toast(res.error || 'Erro ao importar', 'error'); return; }
-  toast(`${res.added} partidas adicionadas, ${res.updated} atualizadas!`, 'success');
+  toast(`${res.updated} partidas atualizadas!`, 'success');
   matchBetsCache = {}; expandedBets.clear(); allMatches = [];
   loadAdminMatches(); loadMatches(); renderBracketTab();
   loadLeaderboard(); loadSpecialAndFeed();

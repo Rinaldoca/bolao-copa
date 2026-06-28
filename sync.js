@@ -67,6 +67,7 @@ const TEAM_MAP = {
   'Curaçao':               'Curaçao',
   'Sweden':                'Suécia',
   'Cape Verde Islands':    'Cabo Verde',
+  'Cape Verde':            'Cabo Verde',
   'New Zealand':           'Nova Zelândia',
   'Iraq':                  'Iraque',
   'Algeria':               'Argélia',
@@ -232,47 +233,104 @@ async function importGroupStage() {
   return { ok: true, imported: mapped.length, deleted_bets: deletedBets };
 }
 
-// ── Import knockout stage ─────────────────────────────────────────────────────
+// ── Import knockout stage from ESPN ───────────────────────────────────────────
 
-const KNOCKOUT_STAGE_MAP = {
-  'ROUND_OF_32':    '32 avos de Final',
-  'ROUND_OF_16':    'Oitavas de Final',
-  'QUARTER_FINALS': 'Quartas de Final',
-  'SEMI_FINALS':    'Semifinal',
-  'THIRD_PLACE':    'Terceiro Lugar',
-  'FINAL':          'Final',
-};
+const ESPN_TBD_ABBREVS = new Set(['3RD', 'RD32', 'RD16', 'QF', 'SF', 'F']);
+
+function espnTeamName(competitor) {
+  if (!competitor) return null;
+  if (ESPN_TBD_ABBREVS.has(competitor.team?.abbreviation)) return null;
+  const name = competitor.team?.displayName || '';
+  if (/\b(Winner|Place|Group [A-Z]|Round of)/i.test(name)) return null;
+  return toPortuguese(name) || null;
+}
 
 async function importKnockoutStage() {
-  const apiKey = process.env.FOOTBALL_API_KEY;
-  if (!apiKey) return { ok: false, error: 'Variável FOOTBALL_API_KEY não configurada' };
+  // Build set of group stage pairs so we can exclude them from ESPN results
+  const groupPairs = new Set(
+    db.getMatches()
+      .filter(m => m.group_name)
+      .map(m => [normalize(m.home_team), normalize(m.away_team)].sort().join('|'))
+  );
 
-  let apiMatches;
-  try {
-    const data = await fetchJson(`${API_BASE}/competitions/WC/matches`, apiKey);
-    apiMatches = (data.matches || []).filter(m => KNOCKOUT_STAGE_MAP[m.stage]);
-  } catch (err) {
-    return { ok: false, error: `Erro na API: ${err.message}` };
+  // Collect ESPN events June 28 – July 20, skip group stage matches
+  const seenIds = new Set();
+  const knockoutEvents = [];
+  const start = new Date('2026-06-28');
+  const end   = new Date('2026-07-20');
+
+  for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+    const dateStr = d.toISOString().slice(0, 10).replace(/-/g, '');
+    try {
+      const data = await fetchEspn(`${ESPN_SCOREBOARD}?dates=${dateStr}`);
+      for (const e of (data.events || [])) {
+        if (seenIds.has(e.id)) continue;
+        seenIds.add(e.id);
+        const comp     = e.competitions?.[0];
+        const homeComp = comp?.competitors?.find(c => c.homeAway === 'home');
+        const awayComp = comp?.competitors?.find(c => c.homeAway === 'away');
+        const homeNorm = normalize(homeComp?.team?.displayName || '');
+        const awayNorm = normalize(awayComp?.team?.displayName || '');
+        if (!homeNorm || !awayNorm) continue;
+        if (groupPairs.has([homeNorm, awayNorm].sort().join('|'))) continue;
+        knockoutEvents.push({ e, comp, homeComp, awayComp });
+      }
+    } catch (err) {
+      console.warn(`[import-knockout] ESPN ${dateStr}: ${err.message}`);
+    }
   }
 
-  if (!apiMatches.length) return { ok: false, error: 'Nenhuma partida de fase eliminatória retornada pela API' };
+  if (!knockoutEvents.length) return { ok: false, error: 'Nenhuma partida retornada pela ESPN' };
 
-  const mapped = apiMatches.map(m => ({
-    api_match_id: m.id,
-    home_team:    toPortuguese(m.homeTeam?.name || '') || 'A definir',
-    away_team:    toPortuguese(m.awayTeam?.name || '') || 'A definir',
-    match_date:   m.utcDate,
-    stage:        KNOCKOUT_STAGE_MAP[m.stage],
-    group_name:   null,
-    venue:        m.venue || null,
-    home_score:   m.status === 'FINISHED' ? (m.score?.fullTime?.home ?? null) : null,
-    away_score:   m.status === 'FINISHED' ? (m.score?.fullTime?.away ?? null) : null,
-    status:       m.status === 'FINISHED' ? 'finished' : 'upcoming',
-  }));
+  // Match each DB knockout match to the closest ESPN event by time (within 6h).
+  // Sort DB matches chronologically so greedy assignment is stable.
+  const dbKnockout = db.getMatches()
+    .filter(m => !m.group_name)
+    .sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
 
-  const result = db.upsertKnockoutMatches(mapped);
-  console.log(`[import-knockout] added:${result.added} updated:${result.updated} skipped:${result.skipped}`);
-  return { ok: true, ...result };
+  const usedIds = new Set();
+  let updated = 0, skipped = 0;
+  // ESPN times can run up to ~4h after scheduled kick-off (late slots, next-day UTC).
+  // Allow events up to 1h before (scheduling slippage) but not earlier — this keeps
+  // group-stage matches (which end hours before R32 kick-offs) from being matched.
+  const BEFORE = 1 * 60 * 60 * 1000;
+  const AFTER  = 5 * 60 * 60 * 1000;
+
+  for (const dbm of dbKnockout) {
+    const dbTime = new Date(dbm.match_date).getTime();
+    let best = null, bestDiff = Infinity;
+
+    for (const ev of knockoutEvents) {
+      if (usedIds.has(ev.e.id)) continue;
+      const delta = new Date(ev.e.date).getTime() - dbTime; // positive = ESPN is later
+      if (delta < -BEFORE || delta > AFTER) continue;
+      const diff = Math.abs(delta);
+      if (diff < bestDiff) { best = ev; bestDiff = diff; }
+    }
+
+    if (!best) { skipped++; continue; }
+    usedIds.add(best.e.id);
+
+    const homeTeam = espnTeamName(best.homeComp);
+    const awayTeam = espnTeamName(best.awayComp);
+    const finished = ESPN_FINISHED.has(best.comp?.status?.type?.name);
+
+    db.editKnockoutMatch(dbm.id, {
+      api_match_id: Number(best.e.id),
+      match_date:   best.e.date,
+      home_team:    homeTeam || 'A definir',
+      away_team:    awayTeam || 'A definir',
+      ...(finished ? {
+        status:     'finished',
+        home_score: Number(best.homeComp?.score ?? 0),
+        away_score: Number(best.awayComp?.score ?? 0),
+      } : {}),
+    });
+    updated++;
+  }
+
+  console.log(`[import-knockout] updated:${updated} skipped:${skipped}`);
+  return { ok: true, updated, skipped };
 }
 
 // ── Generate the full knockout bracket from group standings ───────────────────
@@ -328,16 +386,16 @@ function generateKnockout(groupStandings, resolveTeams = false) {
     { date:'2026-07-06T21:00:00Z', stage:'Oitavas de Final', venue:'Seattle' },
     { date:'2026-07-07T17:00:00Z', stage:'Oitavas de Final', venue:'Los Angeles' },
     { date:'2026-07-07T21:00:00Z', stage:'Oitavas de Final', venue:'Nova York' },
-    // Quartas de Final — 9–11 July
-    { date:'2026-07-09T19:00:00Z', stage:'Quartas de Final',  venue:'Boston' },
-    { date:'2026-07-09T23:00:00Z', stage:'Quartas de Final',  venue:'Los Angeles' },
-    { date:'2026-07-11T19:00:00Z', stage:'Quartas de Final',  venue:'Kansas City' },
-    { date:'2026-07-11T23:00:00Z', stage:'Quartas de Final',  venue:'Miami' },
+    // Quartas de Final — 9–12 July
+    { date:'2026-07-09T20:00:00Z', stage:'Quartas de Final',  venue:'Boston' },
+    { date:'2026-07-10T19:00:00Z', stage:'Quartas de Final',  venue:'Los Angeles' },
+    { date:'2026-07-11T21:00:00Z', stage:'Quartas de Final',  venue:'Kansas City' },
+    { date:'2026-07-12T01:00:00Z', stage:'Quartas de Final',  venue:'Miami' },
     // Semifinal — 14–15 July
-    { date:'2026-07-14T23:00:00Z', stage:'Semifinal',         venue:'Dallas' },
-    { date:'2026-07-15T23:00:00Z', stage:'Semifinal',         venue:'Atlanta' },
+    { date:'2026-07-14T19:00:00Z', stage:'Semifinal',         venue:'Dallas' },
+    { date:'2026-07-15T19:00:00Z', stage:'Semifinal',         venue:'Atlanta' },
     // Terceiro Lugar — 18 July
-    { date:'2026-07-18T20:00:00Z', stage:'Terceiro Lugar',    venue:'Miami' },
+    { date:'2026-07-18T21:00:00Z', stage:'Terceiro Lugar',    venue:'Miami' },
     // Final — 19 July
     { date:'2026-07-19T19:00:00Z', stage:'Final',             venue:'Nova York' },
   ].map(m => ({ api_match_id: null, home_team: 'A definir', away_team: 'A definir',

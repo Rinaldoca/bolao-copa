@@ -240,6 +240,14 @@
         <!-- Match results -->
         <div class="card">
           <h3>📝 Registrar Resultado</h3>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+            <button class="btn btn-secondary btn-sm stage-filter-btn active" onclick="setAdminStageFilter('')">Todas</button>
+            <button class="btn btn-secondary btn-sm stage-filter-btn" onclick="setAdminStageFilter('32 avos de Final')">32 avos</button>
+            <button class="btn btn-secondary btn-sm stage-filter-btn" onclick="setAdminStageFilter('Oitavas de Final')">Oitavas</button>
+            <button class="btn btn-secondary btn-sm stage-filter-btn" onclick="setAdminStageFilter('Quartas de Final')">Quartas</button>
+            <button class="btn btn-secondary btn-sm stage-filter-btn" onclick="setAdminStageFilter('Semifinal')">Semi</button>
+            <button class="btn btn-secondary btn-sm stage-filter-btn" onclick="setAdminStageFilter('Final')">Final</button>
+          </div>
           <div id="admin-match-list"></div>
         </div>
 
