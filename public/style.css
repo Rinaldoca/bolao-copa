@@ -709,6 +709,10 @@ tr.eliminated td:first-child { border-left: 3px solid var(--red); }
 .result-input:focus { outline: none; border-color: var(--gold); }
 .result-sep    { font-weight: 800; color: var(--text-3); }
 .result-saved  { font-size: .78rem; color: var(--green); font-weight: 600; }
+.result-pen-select {
+  height: 36px; font-size: .78rem; background: var(--bg); border: 1px solid var(--border2);
+  border-radius: 6px; color: var(--text); font-family: inherit; padding: 0 4px; max-width: 120px;
+}
 .admin-actions { display: flex; gap: 6px; }
 
 /* ─── Buttons ────────────────────────────────────────────────────────────── */

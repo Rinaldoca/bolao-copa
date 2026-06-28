@@ -116,12 +116,17 @@ function renderAdminMatchList() {
         <div class="admin-match-meta">${dateStr}${m.venue?' · '+m.venue:''} · ${m.stage}${m.group_name?' G'+m.group_name:''}</div>
       </div>
       ${isFinished
-        ? `<span class="result-saved">✓ ${m.home_score}–${m.away_score}</span>`
+        ? `<span class="result-saved">✓ ${m.home_score}–${m.away_score}${m.match_winner ? ' (pen)' : ''}</span>`
         : `<div class="admin-result-form">
             <input type="number" class="result-input" id="rh-${m.id}" min="0" max="20" placeholder="0">
             <span class="result-sep">×</span>
             <input type="number" class="result-input" id="ra-${m.id}" min="0" max="20" placeholder="0">
-            <button class="btn btn-primary btn-sm" onclick="adminSaveResult(${m.id})">Salvar</button>
+            ${!m.group_name ? `<select id="rp-${m.id}" class="result-pen-select" title="Vencedor nos pênaltis">
+              <option value="">Pen?</option>
+              <option value="home">${m.home_team} (pen)</option>
+              <option value="away">${m.away_team} (pen)</option>
+            </select>` : ''}
+            <button class="btn btn-primary btn-sm" onclick="adminSaveResult(${m.id}, ${!m.group_name})">Salvar</button>
            </div>`}
       <div class="admin-actions">
         <button class="btn btn-secondary btn-sm" onclick="openEditModal(${m.id})">✏️</button>
@@ -134,11 +139,13 @@ function renderAdminMatchList() {
   }).join('');
 }
 
-async function adminSaveResult(matchId) {
+async function adminSaveResult(matchId, isKnockout = false) {
   const hs  = parseInt(document.getElementById(`rh-${matchId}`).value);
   const as_ = parseInt(document.getElementById(`ra-${matchId}`).value);
   if (isNaN(hs) || isNaN(as_) || hs < 0 || as_ < 0) { toast('Insira o placar completo', 'error'); return; }
-  const res = await api(`/api/matches/${matchId}/result`, 'PUT', { password: adminPwd, home_score: hs, away_score: as_ });
+  const penSel = isKnockout ? document.getElementById(`rp-${matchId}`) : null;
+  const match_winner = penSel?.value || null;
+  const res = await api(`/api/matches/${matchId}/result`, 'PUT', { password: adminPwd, home_score: hs, away_score: as_, match_winner });
   if (res.error) { toast(res.error, 'error'); return; }
   matchBetsCache = {}; expandedBets.clear();
   await Promise.all([loadAdminMatches(), loadLeaderboard(), loadSpecialAndFeed()]);

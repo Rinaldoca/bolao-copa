@@ -79,11 +79,12 @@ app.put('/api/matches/:id', (req, res) => {
 });
 
 app.put('/api/matches/:id/result', (req, res) => {
-  const { password, home_score, away_score } = req.body;
+  const { password, home_score, away_score, match_winner } = req.body;
   if (!auth(password)) return res.status(403).json({ error: 'Senha incorreta' });
   const hs = parseInt(home_score), as_ = parseInt(away_score);
   if (isNaN(hs) || isNaN(as_) || hs < 0 || as_ < 0) return res.status(400).json({ error: 'Placar inválido' });
-  const match = db.setMatchResult(Number(req.params.id), hs, as_);
+  const winner = ['home','away'].includes(match_winner) ? match_winner : null;
+  const match = db.setMatchResult(Number(req.params.id), hs, as_, winner);
   if (!match) return res.status(404).json({ error: 'Partida não encontrada' });
   res.json(match);
 });

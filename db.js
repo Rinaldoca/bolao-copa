@@ -174,29 +174,48 @@ const STAGE_SCORES = {
   'Final':            [0, 6, 7, 8],
 };
 
-function getBetTier(bet, home_score, away_score) {
-  if (bet.home_score === home_score && bet.away_score === away_score) return 3;
-  if (bet.home_score - bet.away_score === home_score - away_score)    return 2;
-  if (Math.sign(bet.home_score - bet.away_score) === Math.sign(home_score - away_score)) return 1;
+// match_winner: 'home' | 'away' | null (null = regular finish, derive from score)
+// For penalty matches the 90-min score is a draw, so match_winner tells us who
+// actually won. A draw bet (1-1) on a pen match still earns tier 3 because the
+// bettor correctly predicted the 90-min score; predicting the right side to win
+// with any winning score earns tier 1.
+function getBetTier(bet, home_score, away_score, match_winner) {
+  const exact    = bet.home_score === home_score && bet.away_score === away_score;
+  const sameDiff = bet.home_score - bet.away_score === home_score - away_score;
+
+  const effectiveWinner = match_winner ||
+    (home_score > away_score ? 'home' : away_score > home_score ? 'away' : 'draw');
+  const betWinner = bet.home_score > bet.away_score ? 'home'
+                  : bet.away_score > bet.home_score ? 'away' : 'draw';
+
+  // A draw prediction is "right winner" for penalty matches: the score really
+  // was level at 90 min, we just can't bet on who wins the shootout.
+  const rightWinner = betWinner === effectiveWinner ||
+                      (match_winner && betWinner === 'draw');
+
+  if (exact    && rightWinner) return 3;
+  if (sameDiff && rightWinner) return 2;
+  if (rightWinner)             return 1;
   return 0;
 }
 
-function scoreBet(bet, home_score, away_score, stage) {
-  const tier = getBetTier(bet, home_score, away_score);
+function scoreBet(bet, home_score, away_score, stage, match_winner) {
+  const tier = getBetTier(bet, home_score, away_score, match_winner);
   return (STAGE_SCORES[stage] || BASE_SCORES)[tier];
 }
 
-function setMatchResult(id, home_score, away_score) {
+function setMatchResult(id, home_score, away_score, match_winner) {
   const db = load();
   const match = db.matches.find(m => m.id === id);
   if (!match) return null;
-  match.home_score = home_score;
-  match.away_score = away_score;
-  match.status = 'finished';
+  match.home_score   = home_score;
+  match.away_score   = away_score;
+  match.status       = 'finished';
+  match.match_winner = match_winner || null;
 
   const betResults = [];
   db.bets.filter(b => b.match_id === id).forEach(bet => {
-    bet.tier   = getBetTier(bet, home_score, away_score);
+    bet.tier   = getBetTier(bet, home_score, away_score, match.match_winner);
     bet.points = (STAGE_SCORES[match.stage] || BASE_SCORES)[bet.tier];
     betResults.push({ ...bet, user_name: db.users.find(u => u.id === bet.user_id)?.name });
   });
@@ -302,22 +321,22 @@ function recomputeAllPoints() {
   const scoreOf = {};
   db.matches.forEach(m => {
     if (m.status === 'finished' && m.home_score != null && m.away_score != null) {
-      scoreOf[m.id] = [m.home_score, m.away_score, m.stage];
+      scoreOf[m.id] = [m.home_score, m.away_score, m.stage, m.match_winner || null];
     }
   });
   db.bets.forEach(b => {
     const r = scoreOf[b.match_id];
     if (r) {
-      b.tier   = getBetTier(b, r[0], r[1]);
+      b.tier   = getBetTier(b, r[0], r[1], r[3]);
       b.points = (STAGE_SCORES[r[2]] || BASE_SCORES)[b.tier];
     }
   });
   db.feed.forEach(entry => {
     if (entry.type === 'match_result' && Array.isArray(entry.results)) {
-      const stage  = db.matches.find(m => m.id === entry.match_id)?.stage;
-      const scores = STAGE_SCORES[stage] || BASE_SCORES;
+      const m      = db.matches.find(x => x.id === entry.match_id);
+      const scores = STAGE_SCORES[m?.stage] || BASE_SCORES;
       entry.results.forEach(r => {
-        r.points = scores[getBetTier(r, entry.home_score, entry.away_score)];
+        r.points = scores[getBetTier(r, entry.home_score, entry.away_score, m?.match_winner)];
       });
       entry.results.sort((a, b) => b.points - a.points);
     }
@@ -391,10 +410,11 @@ function clearMatchResult(id) {
   const db = load();
   const match = db.matches.find(m => m.id === id);
   if (!match) return null;
-  match.home_score = null;
-  match.away_score = null;
-  match.status = 'upcoming';
-  db.bets.filter(b => b.match_id === id).forEach(b => { b.points = 0; });
+  match.home_score   = null;
+  match.away_score   = null;
+  match.match_winner = null;
+  match.status       = 'upcoming';
+  db.bets.filter(b => b.match_id === id).forEach(b => { b.points = 0; b.tier = undefined; });
   db.feed = db.feed.filter(f => f.match_id !== id);
   persist();
   return match;

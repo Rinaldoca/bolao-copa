@@ -156,11 +156,12 @@ async function syncMatches() {
         // home/away orientation can differ between ESPN and our data.
         const key = `${isoDay(event.date)}|${[homeNorm, awayNorm].sort().join('|')}`;
         espnLookup[key] = {
-          statusName: comp.status?.type?.name,
-          completed:  comp.status?.type?.completed,
+          statusName:  comp.status?.type?.name,
+          completed:   comp.status?.type?.completed,
           homeNorm,
-          homeScore:  parseInt(home.score),
-          awayScore:  parseInt(away.score),
+          homeScore:   parseInt(home.score),
+          awayScore:   parseInt(away.score),
+          homeWinner:  home.winner === true,
         };
       }
     } catch (err) {
@@ -193,7 +194,13 @@ async function syncMatches() {
     const homeScore = sameOrder ? hit.homeScore : hit.awayScore;
     const awayScore = sameOrder ? hit.awayScore : hit.homeScore;
 
-    db.setMatchResult(local.id, homeScore, awayScore);
+    let match_winner = null;
+    if (hit.statusName === 'STATUS_FINAL_PEN' || hit.statusName === 'STATUS_FULL_PEN') {
+      const homeWon = sameOrder ? hit.homeWinner : !hit.homeWinner;
+      match_winner = homeWon ? 'home' : 'away';
+    }
+
+    db.setMatchResult(local.id, homeScore, awayScore, match_winner);
     updated++;
   }
 
