@@ -16,7 +16,7 @@ const LANG_DATA = {
 
     // Leaderboard
     lb_title: 'Placar',
-    lb_subtitle: '🎯 Exato <strong>4 pts</strong> &nbsp;·&nbsp; ⚖️ Saldo <strong>3 pts</strong> &nbsp;·&nbsp; ✅ Resultado <strong>2 pts</strong> &nbsp;·&nbsp; 🏆 Campeão <strong>10 pts</strong> &nbsp;·&nbsp; ⚽ Artilheiro <strong>5 pts</strong>',
+    lb_subtitle: '🎯 Exato <strong>4–8 pts</strong> &nbsp;·&nbsp; ⚖️ Saldo <strong>3–7 pts</strong> &nbsp;·&nbsp; ✅ Resultado <strong>2–6 pts</strong> &nbsp;·&nbsp; 🏆 Campeão <strong>10 pts</strong> &nbsp;·&nbsp; ⚽ Artilheiro <strong>5 pts</strong>',
     lb_general: 'Geral',
     lb_empty: 'Ninguém no placar ainda.',
     lb_col_player: 'Jogador',
@@ -27,13 +27,13 @@ const LANG_DATA = {
 
     // Rules
     rules_title: '📋 Como funciona o bolão',
-    rules_4pts: '4 pts',
+    rules_4pts: '4–8 pts',
     rules_exact_title: '🎯 Placar exato',
     rules_exact_desc: 'Acertou o resultado e o número de gols de cada time.',
-    rules_3pts: '3 pts',
+    rules_3pts: '3–7 pts',
     rules_diff_title: '⚖️ Saldo de gols',
     rules_diff_desc: 'Acertou o vencedor e a diferença de gols, mas errou o placar.',
-    rules_2pts: '2 pts',
+    rules_2pts: '2–6 pts',
     rules_result_title: '✅ Resultado certo',
     rules_result_desc: 'Acertou quem ganhou ou que deu empate, mas errou a diferença de gols.',
     rules_10pts: '10 pts',
@@ -339,7 +339,7 @@ const LANG_DATA = {
 
     // Leaderboard
     lb_title: 'Leaderboard',
-    lb_subtitle: '🎯 Exact <strong>4 pts</strong> &nbsp;·&nbsp; ⚖️ Margin <strong>3 pts</strong> &nbsp;·&nbsp; ✅ Result <strong>2 pts</strong> &nbsp;·&nbsp; 🏆 Champion <strong>10 pts</strong> &nbsp;·&nbsp; ⚽ Top scorer <strong>5 pts</strong>',
+    lb_subtitle: '🎯 Exact <strong>4–8 pts</strong> &nbsp;·&nbsp; ⚖️ Margin <strong>3–7 pts</strong> &nbsp;·&nbsp; ✅ Result <strong>2–6 pts</strong> &nbsp;·&nbsp; 🏆 Champion <strong>10 pts</strong> &nbsp;·&nbsp; ⚽ Top scorer <strong>5 pts</strong>',
     lb_general: 'Overall',
     lb_empty: 'Nobody on the leaderboard yet.',
     lb_col_player: 'Player',
@@ -350,13 +350,13 @@ const LANG_DATA = {
 
     // Rules
     rules_title: '📋 How the pool works',
-    rules_4pts: '4 pts',
+    rules_4pts: '4–8 pts',
     rules_exact_title: '🎯 Exact score',
     rules_exact_desc: 'Got the result and exact number of goals for each team.',
-    rules_3pts: '3 pts',
+    rules_3pts: '3–7 pts',
     rules_diff_title: '⚖️ Goal margin',
     rules_diff_desc: 'Got the winner and the goal difference, but missed the score.',
-    rules_2pts: '2 pts',
+    rules_2pts: '2–6 pts',
     rules_result_title: '✅ Correct result',
     rules_result_desc: 'Got who won or that it was a draw, but missed the goal difference.',
     rules_10pts: '10 pts',
