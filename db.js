@@ -200,8 +200,83 @@ function setMatchResult(id, home_score, away_score) {
   });
   if (db.feed.length > 50) db.feed = db.feed.slice(0, 50);
 
+  advanceKnockoutWinner(db, match);
+
   persist();
   return match;
+}
+
+// ── Knockout bracket auto-advance ─────────────────────────────────────────────
+// FIFA 2026 bracket structure from ESPN. Each entry: [srcPos, dstPos, slot]
+// where pos = 0-indexed position within stage sorted by match_date.
+const BRACKET = {
+  '32 avos de Final': [        // → Oitavas de Final
+    [0,  0, 'home'], [2,  0, 'away'],
+    [1,  1, 'home'], [4,  1, 'away'],
+    [3,  2, 'home'], [5,  2, 'away'],
+    [6,  3, 'home'], [7,  3, 'away'],
+    [10, 4, 'home'], [11, 4, 'away'],
+    [8,  5, 'home'], [9,  5, 'away'],
+    [13, 6, 'home'], [15, 6, 'away'],
+    [12, 7, 'home'], [14, 7, 'away'],
+  ],
+  'Oitavas de Final': [        // → Quartas de Final
+    [0, 0, 'home'], [1, 0, 'away'],
+    [4, 1, 'home'], [5, 1, 'away'],
+    [2, 2, 'home'], [3, 2, 'away'],
+    [6, 3, 'home'], [7, 3, 'away'],
+  ],
+  'Quartas de Final': [        // → Semifinal
+    [0, 0, 'home'], [1, 0, 'away'],
+    [2, 1, 'home'], [3, 1, 'away'],
+  ],
+  'Semifinal': [               // → Final (winners) and Terceiro Lugar (losers)
+    [0, 0, 'home'], [1, 0, 'away'],  // Final
+  ],
+};
+const NEXT_STAGE = {
+  '32 avos de Final': 'Oitavas de Final',
+  'Oitavas de Final': 'Quartas de Final',
+  'Quartas de Final': 'Semifinal',
+  'Semifinal':        'Final',
+};
+
+function advanceKnockoutWinner(db, match) {
+  const rules = BRACKET[match.stage];
+  if (!rules) return;
+
+  const stageMatches = db.matches
+    .filter(m => m.stage === match.stage)
+    .sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
+  const srcPos = stageMatches.findIndex(m => m.id === match.id);
+  if (srcPos === -1) return;
+
+  const rule = rules.find(r => r[0] === srcPos);
+  if (!rule) return;
+
+  const [, dstPos, slot] = rule;
+  const nextStage = NEXT_STAGE[match.stage];
+  const nextMatches = db.matches
+    .filter(m => m.stage === nextStage)
+    .sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
+  const nextMatch = nextMatches[dstPos];
+  if (!nextMatch) return;
+
+  const winner = match.home_score > match.away_score ? match.home_team : match.away_team;
+  if (slot === 'home') nextMatch.home_team = winner;
+  else                 nextMatch.away_team = winner;
+
+  // For Semifinal, also fill 3rd place match with the loser
+  if (match.stage === 'Semifinal') {
+    const loser = match.home_score > match.away_score ? match.away_team : match.home_team;
+    const thirdMatches = db.matches
+      .filter(m => m.stage === 'Terceiro Lugar')
+      .sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
+    if (thirdMatches[0]) {
+      if (slot === 'home') thirdMatches[0].home_team = loser;
+      else                 thirdMatches[0].away_team = loser;
+    }
+  }
 }
 
 // Re-score every finished match's bets (and feed snapshots) with the current
