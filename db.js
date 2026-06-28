@@ -175,10 +175,8 @@ const STAGE_SCORES = {
 };
 
 // match_winner: 'home' | 'away' | null (null = regular finish, derive from score)
-// For penalty matches the 90-min score is a draw, so match_winner tells us who
-// actually won. A draw bet (1-1) on a pen match still earns tier 3 because the
-// bettor correctly predicted the 90-min score; predicting the right side to win
-// with any winning score earns tier 1.
+// For penalty matches the 90-min score is a draw; bet.bet_winner stores the
+// bettor's predicted pen winner. Only correct pen prediction earns rightWinner.
 function getBetTier(bet, home_score, away_score, match_winner) {
   const exact    = bet.home_score === home_score && bet.away_score === away_score;
   const sameDiff = bet.home_score - bet.away_score === home_score - away_score;
@@ -188,10 +186,13 @@ function getBetTier(bet, home_score, away_score, match_winner) {
   const betWinner = bet.home_score > bet.away_score ? 'home'
                   : bet.away_score > bet.home_score ? 'away' : 'draw';
 
-  // A draw prediction is "right winner" for penalty matches: the score really
-  // was level at 90 min, we just can't bet on who wins the shootout.
-  const rightWinner = betWinner === effectiveWinner ||
-                      (match_winner && betWinner === 'draw');
+  let rightWinner;
+  if (match_winner && betWinner === 'draw') {
+    // Draw bet on a pen match: must have predicted the right pen winner
+    rightWinner = bet.bet_winner === match_winner;
+  } else {
+    rightWinner = betWinner === effectiveWinner;
+  }
 
   if (exact    && rightWinner) return 3;
   if (sameDiff && rightWinner) return 2;
@@ -467,14 +468,17 @@ function getBets({ user_id, match_id } = {}) {
     });
 }
 
-function upsertBet({ user_id, match_id, home_score, away_score }) {
+function upsertBet({ user_id, match_id, home_score, away_score, bet_winner }) {
   const db = load();
+  const isDraw = home_score === away_score;
+  const winner = isDraw && ['home','away'].includes(bet_winner) ? bet_winner : null;
   let bet = db.bets.find(b => b.user_id === user_id && b.match_id === match_id);
   if (bet) {
-    bet.home_score = home_score;
-    bet.away_score = away_score;
+    bet.home_score  = home_score;
+    bet.away_score  = away_score;
+    bet.bet_winner  = winner;
   } else {
-    bet = { id: ++db._seq.bets, user_id, match_id, home_score, away_score, points: 0, created_at: new Date().toISOString() };
+    bet = { id: ++db._seq.bets, user_id, match_id, home_score, away_score, bet_winner: winner, points: 0, created_at: new Date().toISOString() };
     db.bets.push(bet);
   }
   persist();

@@ -119,14 +119,14 @@ app.get('/api/bets', (req, res) => {
 });
 
 app.post('/api/bets', (req, res) => {
-  const { user_id, match_id, home_score, away_score } = req.body;
+  const { user_id, match_id, home_score, away_score, bet_winner } = req.body;
   const match = db.getMatchById(Number(match_id));
   if (!match)                             return res.status(404).json({ error: 'Partida não encontrada' });
   if (match.status !== 'upcoming')        return res.status(400).json({ error: 'Partida já encerrada' });
   if (new Date() > new Date(match.match_date) - 5 * 60 * 1000) return res.status(400).json({ error: 'Prazo de apostas encerrado (fecha 5 min antes do jogo)' });
   const hs = parseInt(home_score), as_ = parseInt(away_score);
   if (isNaN(hs) || isNaN(as_) || hs < 0 || as_ < 0) return res.status(400).json({ error: 'Placar inválido' });
-  res.json(db.upsertBet({ user_id: Number(user_id), match_id: Number(match_id), home_score: hs, away_score: as_ }));
+  res.json(db.upsertBet({ user_id: Number(user_id), match_id: Number(match_id), home_score: hs, away_score: as_, bet_winner }));
 });
 
 app.delete('/api/bets', (req, res) => {

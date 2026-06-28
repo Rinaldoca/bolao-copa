@@ -322,7 +322,7 @@ function renderMatchCard(m) {
       ${bet
         ? `<div class="bet-result-row">
             <span class="bet-label">${t('bet_label')}</span>
-            <span class="bet-prediction">${bet.home_score}×${bet.away_score}</span>
+            <span class="bet-prediction">${bet.home_score}×${bet.away_score}${bet.bet_winner ? ` · ${tTeam(bet.bet_winner === 'home' ? m.home_team : m.away_team)} pen` : ''}</span>
             <span class="pts-chip ${chipClass}">${pts} pt${pts!==1?'s':''}</span>
             <span>${emoji}</span>
            </div>`
@@ -334,18 +334,25 @@ function renderMatchCard(m) {
     betBar = `<div class="bet-bar"><span class="no-bet-msg"><a href="#" onclick="openUserModal();return false;">${t('login_to_bet_link')}</a> ${t('login_to_bet_suffix')}</span></div>`;
   } else {
     const hasBet = bet !== undefined;
+    const isKnockout = !m.group_name;
+    const showPen = isKnockout && hasBet && bet.home_score === bet.away_score;
     betBar = `<div class="bet-bar">
       <span class="bet-label">${t('bet_label')}</span>
       <div class="bet-inputs">
         <input type="number" class="bet-score-input" id="bh-${m.id}" min="0" max="20"
           value="${hasBet ? bet.home_score : ''}" placeholder="0"
-          oninput="this.value=Math.min(20,Math.max(0,parseInt(this.value)||0))"
+          oninput="this.value=Math.min(20,Math.max(0,parseInt(this.value)||0));${isKnockout ? `toggleBetPen(${m.id});` : ''}"
           onblur="autoSaveBet(${m.id})" onkeydown="if(event.key==='Enter'){this.blur()}">
         <span class="bet-x">×</span>
         <input type="number" class="bet-score-input" id="ba-${m.id}" min="0" max="20"
           value="${hasBet ? bet.away_score : ''}" placeholder="0"
-          oninput="this.value=Math.min(20,Math.max(0,parseInt(this.value)||0))"
+          oninput="this.value=Math.min(20,Math.max(0,parseInt(this.value)||0));${isKnockout ? `toggleBetPen(${m.id});` : ''}"
           onblur="autoSaveBet(${m.id})" onkeydown="if(event.key==='Enter'){this.blur()}">
+        ${isKnockout ? `<select id="bp-${m.id}" class="bet-pen-select" title="Vencedor nos pênaltis" style="${showPen ? '' : 'display:none'}" onchange="autoSaveBet(${m.id})">
+          <option value="">Pen?</option>
+          <option value="home" ${hasBet && bet.bet_winner === 'home' ? 'selected' : ''}>${tTeam(m.home_team)}</option>
+          <option value="away" ${hasBet && bet.bet_winner === 'away' ? 'selected' : ''}>${tTeam(m.away_team)}</option>
+        </select>` : ''}
       </div>
       <span class="auto-bet-status" id="abs-${m.id}">${hasBet ? '✓' : ''}</span>
     </div>`;
@@ -465,12 +472,24 @@ async function toggleAllBets(matchId, btn, hideScores) {
   }
 }
 
+function toggleBetPen(matchId) {
+  const sel = document.getElementById(`bp-${matchId}`);
+  if (!sel) return;
+  const hs  = parseInt(document.getElementById(`bh-${matchId}`)?.value);
+  const as_ = parseInt(document.getElementById(`ba-${matchId}`)?.value);
+  const isDraw = !isNaN(hs) && !isNaN(as_) && hs === as_;
+  sel.style.display = isDraw ? '' : 'none';
+  if (!isDraw) sel.value = '';
+}
+
 async function saveBet(matchId) {
   if (!currentUser) { toast(t('toast_select_profile'), 'error'); return; }
   const hs  = parseInt(document.getElementById(`bh-${matchId}`).value);
   const as_ = parseInt(document.getElementById(`ba-${matchId}`).value);
   if (isNaN(hs) || isNaN(as_) || hs < 0 || as_ < 0) { toast(t('toast_fill_scores'), 'error'); return; }
-  const result = await api('/api/bets', 'POST', { user_id: currentUser.id, match_id: matchId, home_score: hs, away_score: as_ });
+  const penSel = document.getElementById(`bp-${matchId}`);
+  const bet_winner = penSel?.value || null;
+  const result = await api('/api/bets', 'POST', { user_id: currentUser.id, match_id: matchId, home_score: hs, away_score: as_, bet_winner });
   if (result.error) { toast(result.error, 'error'); return; }
   userBets[matchId] = result;
   toast(t('toast_bet_saved'), 'success');
@@ -489,11 +508,13 @@ async function autoSaveBet(matchId) {
   const hs  = parseInt(hInput.value);
   const as_ = parseInt(aInput.value);
   if (isNaN(hs) || isNaN(as_) || hs < 0 || as_ < 0) return;
+  const penSel = document.getElementById(`bp-${matchId}`);
+  const bet_winner = penSel?.value || null;
   const isNew = !userBets[matchId];
   const statusEl = document.getElementById(`abs-${matchId}`);
   if (statusEl) { statusEl.textContent = '…'; statusEl.className = 'auto-bet-status saving'; }
   _savingBets.add(matchId);
-  const result = await api('/api/bets', 'POST', { user_id: currentUser.id, match_id: matchId, home_score: hs, away_score: as_ });
+  const result = await api('/api/bets', 'POST', { user_id: currentUser.id, match_id: matchId, home_score: hs, away_score: as_, bet_winner });
   _savingBets.delete(matchId);
   if (result.error) {
     if (statusEl) { statusEl.textContent = '✗'; statusEl.className = 'auto-bet-status error'; }

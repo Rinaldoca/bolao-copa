@@ -430,6 +430,10 @@ main { max-width: 860px; margin: 0 auto; padding: 28px 20px 60px; }
 .match-card.needs-bet .bet-score-input { border-color: rgba(37,99,235,.3); }
 .match-card.needs-bet .bet-score-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-dim); }
 .bet-x { color: var(--text-3); font-size: .85rem; font-weight: 700; }
+.bet-pen-select {
+  height: 36px; font-size: .78rem; background: var(--bg); border: 1px solid var(--border2);
+  border-radius: 6px; color: var(--text); font-family: inherit; padding: 0 4px; max-width: 110px;
+}
 
 .bet-status { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 .saved-tag  { font-size: .75rem; color: var(--green); font-weight: 600; }
